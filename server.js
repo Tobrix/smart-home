@@ -19,19 +19,20 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dní
         httpOnly: true,
         sameSite: 'lax'
+        // maxAge se nastaví dynamicky při loginu podle "remember me"
     }
 }));
 
-// ---- LOGIN CREDENTIALS (z .env nebo výchozí) ----
+// ---- LOGIN CREDENTIALS ----
 const LOGIN_USER = process.env.LOGIN_USER || 'admin';
 const LOGIN_PASS = process.env.LOGIN_PASS || 'admin';
 
 // ---- AUTH MIDDLEWARE ----
 function requireAuth(req, res, next) {
     if (req.session?.loggedIn) return next();
+    if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Nepřihlášen' });
     res.redirect('/login');
 }
 
@@ -43,10 +44,17 @@ app.get('/login', (req, res) => {
 
 // ---- LOGIN POST ----
 app.post('/login', (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, remember } = req.body;
     if (username === LOGIN_USER && password === LOGIN_PASS) {
         req.session.loggedIn = true;
         req.session.username = username;
+        // remember = true → 30 dní, jinak session cookie (smaže se po zavření prohlížeče)
+        if (remember) {
+            req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000; // 30 dní
+        } else {
+            req.session.cookie.maxAge = null; // session cookie
+            req.session.cookie.expires = false;
+        }
         res.json({ success: true });
     } else {
         res.json({ success: false, error: 'Špatné přihlašovací údaje' });
@@ -59,7 +67,7 @@ app.post('/logout', (req, res) => {
     res.json({ success: true });
 });
 
-// ---- CHECK AUTH (pro frontend) ----
+// ---- CHECK AUTH ----
 app.get('/api/auth/check', (req, res) => {
     res.json({ loggedIn: !!req.session?.loggedIn, username: req.session?.username || '' });
 });
