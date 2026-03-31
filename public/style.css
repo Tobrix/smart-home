@@ -424,3 +424,12 @@ body { display:flex; }
 }
 .logout-btn svg { width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; flex-shrink:0; }
 .logout-btn:hover { color:var(--red); border-color:var(--red); background:rgba(242,95,92,0.06); }
+
+/* MOBILE LOGOUT TAB */
+.mobile-logout {
+  background:none; border:none; cursor:pointer;
+  font-family:var(--font);
+  color:var(--sub);
+}
+.mobile-logout:hover, .mobile-logout:active { color:var(--red); }
+.mobile-logout svg { stroke:currentColor; }
