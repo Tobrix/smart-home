@@ -3,29 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>HomeOS — Přihlášení</title>
+  <title>HomeOS</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#0d0f12">
+  <meta name="theme-color" content="#080a0f">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="/icons/icon-512.png">
   <style>
     :root {
-      --bg:      #0d0f12;
-      --surface: #141720;
-      --surface2:#1c2030;
-      --border:  rgba(255,255,255,0.07);
-      --border2: rgba(255,255,255,0.14);
-      --text:    #e8eaf0;
-      --sub:     rgba(232,234,240,0.45);
+      --bg:      #080a0f;
+      --surface: #111318;
+      --surface2:#181c26;
+      --border:  rgba(255,255,255,0.06);
+      --border2: rgba(255,255,255,0.11);
+      --text:    #eceef5;
+      --sub:     rgba(236,238,245,0.42);
       --accent:  #4f8ef7;
       --accent2: #7c6af7;
       --red:     #f25f5c;
       --green:   #3ecf8e;
-      --r:       14px;
       --font:    'DM Sans', sans-serif;
       --mono:    'DM Mono', monospace;
     }
@@ -33,319 +32,429 @@
     *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
     html, body {
-      height:100%;
-      background:var(--bg);
-      color:var(--text);
-      font-family:var(--font);
-      font-size:14px;
-      -webkit-font-smoothing:antialiased;
-      overflow:hidden;
+      height:100%; background:var(--bg);
+      color:var(--text); font-family:var(--font);
+      font-size:14px; -webkit-font-smoothing:antialiased;
     }
 
-    /* Animované pozadí */
-    .bg-orbs {
-      position:fixed; inset:0; z-index:0; pointer-events:none;
-      overflow:hidden;
+    /* ---- BACKGROUND MESH ---- */
+    .bg {
+      position:fixed; inset:0; z-index:0; overflow:hidden;
     }
-    .orb {
-      position:absolute; border-radius:50%;
-      filter:blur(80px); opacity:0.35;
-      animation:orbFloat 12s ease-in-out infinite;
+    .mesh {
+      position:absolute; inset:-50%;
+      background:
+        radial-gradient(ellipse 60% 50% at 20% 20%, rgba(79,142,247,0.18) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 80% 80%, rgba(124,106,247,0.15) 0%, transparent 60%),
+        radial-gradient(ellipse 30% 30% at 50% 50%, rgba(62,207,142,0.06) 0%, transparent 70%);
+      animation:meshPulse 18s ease-in-out infinite alternate;
     }
-    .orb-1 {
-      width:400px; height:400px;
-      background:radial-gradient(circle, #4f8ef7, transparent);
-      top:-100px; left:-80px;
-      animation-delay:0s;
+    @keyframes meshPulse {
+      0%   { transform:scale(1) rotate(0deg); }
+      100% { transform:scale(1.08) rotate(3deg); }
     }
-    .orb-2 {
-      width:350px; height:350px;
-      background:radial-gradient(circle, #7c6af7, transparent);
-      bottom:-80px; right:-60px;
-      animation-delay:-4s;
+    .grid-lines {
+      position:absolute; inset:0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size:48px 48px;
+      mask-image:radial-gradient(ellipse 70% 70% at 50% 50%, black, transparent);
     }
-    .orb-3 {
-      width:200px; height:200px;
-      background:radial-gradient(circle, #3ecf8e, transparent);
-      top:50%; left:60%;
-      animation-delay:-8s;
-      opacity:0.2;
-    }
-    @keyframes orbFloat {
-      0%, 100% { transform:translate(0,0) scale(1); }
-      33%       { transform:translate(30px,-20px) scale(1.05); }
-      66%       { transform:translate(-20px,15px) scale(0.95); }
+    .noise-overlay {
+      position:absolute; inset:0; opacity:0.04;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size:140px;
     }
 
-    /* Noise overlay */
-    .noise {
-      position:fixed; inset:0; z-index:1; pointer-events:none; opacity:0.025;
-      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-      background-size:150px;
-    }
-
-    /* Wrapper */
-    .login-wrap {
+    /* ---- LAYOUT ---- */
+    .page {
       position:relative; z-index:2;
-      width:100%; height:100%;
-      display:flex; flex-direction:column;
-      align-items:center; justify-content:center;
-      padding:24px;
-      padding-top:env(safe-area-inset-top, 24px);
-      padding-bottom:env(safe-area-inset-bottom, 24px);
+      min-height:100%; display:flex;
+      padding:env(safe-area-inset-top, 0) 0 env(safe-area-inset-bottom, 0);
     }
 
-    /* Logo */
-    .login-logo {
-      display:flex; align-items:center; gap:12px;
-      margin-bottom:48px;
-      animation:fadeUp 0.5s ease both;
+    /* Split — ilustrace vlevo, form vpravo */
+    .split-left {
+      flex:1; display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      padding:48px; gap:32px;
     }
-    .logo-icon {
-      width:48px; height:48px; border-radius:14px;
+    .split-right {
+      width:440px; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center;
+      padding:40px 48px;
+      border-left:1px solid var(--border);
+      background:rgba(17,19,24,0.7);
+      backdrop-filter:blur(24px);
+    }
+
+    /* ---- ILUSTRACE (levá část) ---- */
+    .brand {
+      display:flex; align-items:center; gap:14px;
+      align-self:flex-start;
+    }
+    .brand-icon {
+      width:44px; height:44px; border-radius:13px;
       background:linear-gradient(135deg, var(--accent), var(--accent2));
       display:flex; align-items:center; justify-content:center;
-      font-size:22px;
-      box-shadow:0 8px 32px rgba(79,142,247,0.3);
+      font-size:20px;
+      box-shadow:0 8px 24px rgba(79,142,247,0.35);
     }
-    .logo-text {
-      font-size:28px; font-weight:600; letter-spacing:-0.03em;
+    .brand-name { font-size:22px; font-weight:700; letter-spacing:-0.02em; }
+    .brand-tag  { font-size:12px; color:var(--sub); margin-top:1px; }
+
+    .hero-title {
+      font-size:clamp(32px,4vw,52px); font-weight:700;
+      letter-spacing:-0.04em; line-height:1.1;
+      background:linear-gradient(135deg, var(--text) 40%, rgba(236,238,245,0.4));
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+      background-clip:text;
+      align-self:flex-start;
     }
-    .logo-sub {
-      font-size:13px; color:var(--sub); margin-top:2px;
+    .hero-sub {
+      font-size:15px; color:var(--sub); line-height:1.6;
+      max-width:380px; align-self:flex-start;
     }
 
-    /* Karta */
-    .login-card {
-      width:100%; max-width:380px;
-      background:var(--surface);
+    .stats-pills {
+      display:flex; gap:12px; flex-wrap:wrap;
+      align-self:flex-start;
+    }
+    .pill {
+      display:flex; align-items:center; gap:7px;
+      background:rgba(255,255,255,0.04);
       border:1px solid var(--border2);
-      border-radius:24px;
-      padding:32px;
-      box-shadow:0 24px 64px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04) inset;
-      animation:fadeUp 0.5s 0.1s ease both;
+      border-radius:100px; padding:7px 14px;
+      font-size:12px; font-weight:500; color:var(--sub);
     }
+    .pill-dot {
+      width:7px; height:7px; border-radius:50%;
+      background:var(--green);
+      box-shadow:0 0 8px var(--green);
+      animation:pillPulse 2s infinite;
+    }
+    @keyframes pillPulse { 0%,100%{opacity:1}50%{opacity:0.4} }
 
-    .card-title {
-      font-size:20px; font-weight:600; margin-bottom:4px;
-    }
-    .card-sub {
-      font-size:13px; color:var(--sub); margin-bottom:28px;
-    }
+    /* ---- FORM ---- */
+    .form-wrap { width:100%; max-width:360px; }
 
-    /* Form */
-    .field {
-      margin-bottom:16px;
-    }
+    .form-header { margin-bottom:32px; }
+    .form-title { font-size:26px; font-weight:700; letter-spacing:-0.03em; margin-bottom:6px; }
+    .form-sub   { font-size:13px; color:var(--sub); line-height:1.5; }
+
+    .field { margin-bottom:14px; }
     .field label {
       display:block; font-size:11px; font-weight:600;
       text-transform:uppercase; letter-spacing:0.08em;
-      color:var(--sub); margin-bottom:8px;
+      color:var(--sub); margin-bottom:7px;
     }
-    .field-wrap {
-      position:relative;
-    }
-    .field-wrap svg {
-      position:absolute; left:14px; top:50%; transform:translateY(-50%);
+    .field-inner { position:relative; }
+    .field-inner .f-icon {
+      position:absolute; left:13px; top:50%; transform:translateY(-50%);
       width:16px; height:16px; stroke:var(--sub); fill:none;
       stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round;
-      pointer-events:none; transition:stroke 0.2s;
+      pointer-events:none; transition:stroke 0.18s;
     }
-    .field input {
-      width:100%; background:var(--surface2);
-      border:1px solid var(--border);
-      border-radius:10px; color:var(--text);
+    .field-inner input {
+      width:100%; padding:13px 44px 13px 40px;
+      background:var(--surface2); border:1px solid var(--border2);
+      border-radius:11px; color:var(--text);
       font-family:var(--font); font-size:14px;
-      padding:12px 14px 12px 42px;
-      outline:none; transition:all 0.2s;
+      outline:none; transition:all 0.18s;
       -webkit-appearance:none;
     }
-    .field input::placeholder { color:var(--sub); }
-    .field input:focus {
+    .field-inner input::placeholder { color:var(--sub); }
+    .field-inner input:focus {
       border-color:var(--accent);
-      background:rgba(79,142,247,0.04);
-      box-shadow:0 0 0 3px rgba(79,142,247,0.12);
+      background:rgba(79,142,247,0.05);
+      box-shadow:0 0 0 3px rgba(79,142,247,0.14);
     }
-    .field input:focus + svg,
-    .field-wrap:focus-within svg { stroke:var(--accent); }
+    .field-inner:focus-within .f-icon { stroke:var(--accent); }
 
-    /* Přepnout viditelnost hesla */
-    .toggle-pass {
-      position:absolute; right:12px; top:50%; transform:translateY(-50%);
+    .eye-btn {
+      position:absolute; right:11px; top:50%; transform:translateY(-50%);
       background:none; border:none; cursor:pointer;
-      color:var(--sub); padding:4px; line-height:0;
-      transition:color 0.2s;
+      color:var(--sub); padding:5px; line-height:0; transition:color 0.18s;
     }
-    .toggle-pass:hover { color:var(--text); }
-    .toggle-pass svg { width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; }
+    .eye-btn:hover { color:var(--text); }
+    .eye-btn svg { width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; }
 
-    /* Chybová hláška */
-    .error-msg {
-      display:none; align-items:center; gap:8px;
-      background:rgba(242,95,92,0.1); border:1px solid rgba(242,95,92,0.25);
+    /* Error */
+    .error-box {
+      display:none; align-items:center; gap:9px;
+      background:rgba(242,95,92,0.09); border:1px solid rgba(242,95,92,0.2);
       border-radius:10px; padding:10px 14px;
-      color:var(--red); font-size:13px;
-      margin-bottom:20px;
-      animation:shake 0.4s ease;
+      color:var(--red); font-size:13px; margin-bottom:16px;
     }
-    .error-msg.show { display:flex; }
-    .error-msg svg { width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:2; flex-shrink:0; }
-    @keyframes shake {
+    .error-box.show { display:flex; animation:errShake 0.35s ease; }
+    .error-box svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2; flex-shrink:0; }
+    @keyframes errShake {
       0%,100%{transform:translateX(0)}
-      20%{transform:translateX(-6px)}
-      40%{transform:translateX(6px)}
-      60%{transform:translateX(-4px)}
-      80%{transform:translateX(4px)}
+      20%{transform:translateX(-5px)} 40%{transform:translateX(5px)}
+      60%{transform:translateX(-3px)} 80%{transform:translateX(3px)}
     }
 
-    /* Submit tlačítko */
-    .btn-login {
+    /* Remember checkbox */
+    .remember-row {
+      display:flex; align-items:center; gap:10px;
+      margin:18px 0 22px;
+    }
+    .cb-wrap {
+      position:relative; width:20px; height:20px; flex-shrink:0;
+    }
+    .cb-wrap input[type=checkbox] {
+      position:absolute; inset:0; opacity:0; cursor:pointer; margin:0;
+    }
+    .cb-box {
+      width:20px; height:20px; border-radius:6px;
+      border:1.5px solid var(--border2);
+      background:var(--surface2);
+      display:flex; align-items:center; justify-content:center;
+      transition:all 0.18s; pointer-events:none;
+    }
+    .cb-wrap input:checked ~ .cb-box {
+      background:var(--accent); border-color:var(--accent);
+      box-shadow:0 0 0 3px rgba(79,142,247,0.2);
+    }
+    .cb-box svg {
+      width:11px; height:11px; stroke:white; fill:none;
+      stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round;
+      opacity:0; transform:scale(0.5); transition:all 0.15s;
+    }
+    .cb-wrap input:checked ~ .cb-box svg { opacity:1; transform:scale(1); }
+    .remember-label {
+      font-size:13px; color:var(--sub); cursor:pointer;
+      user-select:none; line-height:1.3;
+    }
+    .remember-label strong { color:var(--text); font-weight:500; }
+
+    /* Submit */
+    .btn-submit {
       width:100%; padding:14px;
-      background:linear-gradient(135deg, var(--accent), var(--accent2));
-      border:none; border-radius:10px;
+      background:linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+      border:none; border-radius:11px;
       color:white; font-family:var(--font); font-size:15px; font-weight:600;
       cursor:pointer; letter-spacing:0.01em;
-      box-shadow:0 8px 24px rgba(79,142,247,0.25);
-      transition:all 0.2s;
-      position:relative; overflow:hidden;
+      box-shadow:0 6px 24px rgba(79,142,247,0.28), 0 1px 0 rgba(255,255,255,0.12) inset;
+      transition:all 0.2s; position:relative;
     }
-    .btn-login:hover { transform:translateY(-1px); box-shadow:0 12px 32px rgba(79,142,247,0.35); }
-    .btn-login:active { transform:translateY(0); }
-    .btn-login.loading { pointer-events:none; opacity:0.7; }
-    .btn-login .btn-spinner {
-      display:none; width:18px; height:18px; border-radius:50%;
-      border:2px solid rgba(255,255,255,0.3); border-top-color:white;
-      animation:spin 0.7s linear infinite; margin:0 auto;
+    .btn-submit:hover:not(:disabled) {
+      transform:translateY(-1px);
+      box-shadow:0 10px 32px rgba(79,142,247,0.4), 0 1px 0 rgba(255,255,255,0.12) inset;
     }
-    .btn-login.loading .btn-text { display:none; }
-    .btn-login.loading .btn-spinner { display:block; }
+    .btn-submit:active:not(:disabled) { transform:translateY(0); }
+    .btn-submit:disabled { opacity:0.65; cursor:not-allowed; }
+    .btn-text { display:block; }
+    .btn-spinner {
+      display:none; width:18px; height:18px; margin:0 auto;
+      border-radius:50%; border:2px solid rgba(255,255,255,0.3);
+      border-top-color:white; animation:spin 0.7s linear infinite;
+    }
+    .btn-submit.loading .btn-text { display:none; }
+    .btn-submit.loading .btn-spinner { display:block; }
     @keyframes spin { to{transform:rotate(360deg)} }
-    @keyframes fadeUp {
-      from { opacity:0; transform:translateY(16px); }
+
+    /* Page animations */
+    .anim { animation:fadeSlide 0.55s cubic-bezier(0.2,0.8,0.2,1) both; }
+    .anim-1 { animation-delay:0.05s; }
+    .anim-2 { animation-delay:0.12s; }
+    .anim-3 { animation-delay:0.19s; }
+    .anim-4 { animation-delay:0.26s; }
+    @keyframes fadeSlide {
+      from { opacity:0; transform:translateY(14px); }
       to   { opacity:1; transform:translateY(0); }
     }
 
-    /* Verze */
-    .login-footer {
-      margin-top:24px; text-align:center;
-      font-size:12px; color:var(--sub);
-      animation:fadeUp 0.5s 0.2s ease both;
+    /* ---- MOBILE ---- */
+    @media (max-width:700px) {
+      .split-left { display:none; }
+      .split-right {
+        width:100%; border-left:none; background:none;
+        padding:24px 24px env(safe-area-inset-bottom, 24px);
+        align-items:flex-start; justify-content:center;
+      }
+      .page { flex-direction:column; }
+      .form-wrap { max-width:100%; }
+
+      /* Kompaktní brand nahoře */
+      .mobile-brand {
+        display:flex; align-items:center; gap:12px;
+        margin-bottom:32px;
+      }
+      .mobile-brand-icon {
+        width:40px; height:40px; border-radius:12px;
+        background:linear-gradient(135deg, var(--accent), var(--accent2));
+        display:flex; align-items:center; justify-content:center; font-size:18px;
+        box-shadow:0 6px 20px rgba(79,142,247,0.3);
+      }
+      .mobile-brand-name { font-size:20px; font-weight:700; letter-spacing:-0.02em; }
+      .mobile-brand-tag  { font-size:11px; color:var(--sub); }
+    }
+    @media (min-width:701px) {
+      .mobile-brand { display:none; }
     }
   </style>
 </head>
 <body>
-  <div class="bg-orbs">
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
-    <div class="orb orb-3"></div>
+  <div class="bg">
+    <div class="mesh"></div>
+    <div class="grid-lines"></div>
+    <div class="noise-overlay"></div>
   </div>
-  <div class="noise"></div>
 
-  <div class="login-wrap">
-    <div class="login-logo">
-      <div class="logo-icon">⌂</div>
-      <div>
-        <div class="logo-text">HomeOS</div>
-        <div class="logo-sub">Chytrá domácnost</div>
+  <div class="page">
+
+    <!-- LEVÁ ČÁST — pouze desktop -->
+    <div class="split-left">
+      <div class="brand anim anim-1">
+        <div class="brand-icon">⌂</div>
+        <div>
+          <div class="brand-name">HomeOS</div>
+          <div class="brand-tag">Chytrá domácnost</div>
+        </div>
+      </div>
+
+      <div class="hero-title anim anim-2">Tvůj dům.<br>Tvoje pravidla.</div>
+
+      <div class="hero-sub anim anim-3">
+        Ovládej světla, senzory a zásuvky z jednoho místa.
+        Sleduj teplotu, spotřebu energie a buď vždy v obraze.
+      </div>
+
+      <div class="stats-pills anim anim-4">
+        <div class="pill"><div class="pill-dot"></div>Systém online</div>
+        <div class="pill">🌡️ Senzory aktivní</div>
+        <div class="pill">💡 Světla připravena</div>
       </div>
     </div>
 
-    <div class="login-card">
-      <div class="card-title">Přihlásit se</div>
-      <div class="card-sub">Zadej své přihlašovací údaje</div>
+    <!-- PRAVÁ ČÁST — form -->
+    <div class="split-right">
+      <div class="form-wrap">
 
-      <div class="error-msg" id="error-msg">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <span id="error-text">Špatné přihlašovací údaje</span>
+        <!-- Mobilní brand -->
+        <div class="mobile-brand anim anim-1">
+          <div class="mobile-brand-icon">⌂</div>
+          <div>
+            <div class="mobile-brand-name">HomeOS</div>
+            <div class="mobile-brand-tag">Chytrá domácnost</div>
+          </div>
+        </div>
+
+        <div class="form-header anim anim-1">
+          <div class="form-title">Přihlásit se</div>
+          <div class="form-sub">Zadej přihlašovací údaje pro přístup k systému.</div>
+        </div>
+
+        <div class="error-box" id="err">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="err-text">Špatné přihlašovací údaje</span>
+        </div>
+
+        <form id="form" onsubmit="doLogin(event)" novalidate>
+
+          <div class="field anim anim-2">
+            <label for="u">Uživatelské jméno</label>
+            <div class="field-inner">
+              <svg class="f-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <input type="text" id="u" name="username" placeholder="username"
+                autocomplete="username" autocapitalize="none" spellcheck="false" required>
+            </div>
+          </div>
+
+          <div class="field anim anim-3">
+            <label for="p">Heslo</label>
+            <div class="field-inner">
+              <svg class="f-icon" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <input type="password" id="p" name="password" placeholder="••••••••"
+                autocomplete="current-password" required>
+              <button type="button" class="eye-btn" id="eye" onclick="toggleEye()">
+                <svg id="eye-svg" viewBox="0 0 24 24">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="remember-row anim anim-4">
+            <label class="cb-wrap">
+              <input type="checkbox" id="remember" name="remember">
+              <div class="cb-box">
+                <svg viewBox="0 0 12 12"><polyline points="2 6 5 9 10 3"/></svg>
+              </div>
+            </label>
+            <label class="remember-label" for="remember">
+              Zapamatovat přihlášení <strong>(30 dní)</strong>
+            </label>
+          </div>
+
+          <button type="submit" class="btn-submit anim anim-4" id="btn">
+            <span class="btn-text">Přihlásit se →</span>
+            <div class="btn-spinner"></div>
+          </button>
+
+        </form>
       </div>
-
-      <form id="login-form" onsubmit="doLogin(event)">
-        <div class="field">
-          <label>Uživatelské jméno</label>
-          <div class="field-wrap">
-            <input type="text" id="username" name="username" placeholder="Zadej username"
-              autocomplete="username" autocapitalize="none" required>
-            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          </div>
-        </div>
-
-        <div class="field">
-          <label>Heslo</label>
-          <div class="field-wrap">
-            <input type="password" id="password" name="password" placeholder="Zadej heslo"
-              autocomplete="current-password" required>
-            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            <button type="button" class="toggle-pass" id="toggle-pass" onclick="togglePass()" title="Zobrazit heslo">
-              <svg id="eye-icon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
-          </div>
-        </div>
-
-        <div style="height:8px"></div>
-
-        <button type="submit" class="btn-login" id="btn-login">
-          <span class="btn-text">Přihlásit se</span>
-          <div class="btn-spinner"></div>
-        </button>
-      </form>
     </div>
 
-    <div class="login-footer">HomeOS &nbsp;·&nbsp; Chytrá domácnost</div>
   </div>
 
   <script>
     async function doLogin(e) {
       e.preventDefault();
-      const btn = document.getElementById('btn-login');
-      const errEl = document.getElementById('error-msg');
-      const errTxt = document.getElementById('error-text');
+      const btn  = document.getElementById('btn');
+      const err  = document.getElementById('err');
+      const errT = document.getElementById('err-text');
 
       btn.classList.add('loading');
-      errEl.classList.remove('show');
+      btn.disabled = true;
+      err.classList.remove('show');
 
-      const username = document.getElementById('username').value;
-      const password = document.getElementById('password').value;
+      const username = document.getElementById('u').value.trim();
+      const password = document.getElementById('p').value;
+      const remember = document.getElementById('remember').checked;
 
       try {
         const res = await fetch('/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({ username, password, remember })
         });
         const data = await res.json();
 
         if (data.success) {
           window.location.href = '/';
         } else {
-          errTxt.textContent = data.error || 'Špatné přihlašovací údaje';
-          errEl.classList.add('show');
+          errT.textContent = data.error || 'Špatné přihlašovací údaje';
+          err.classList.add('show');
           btn.classList.remove('loading');
-          document.getElementById('password').value = '';
-          document.getElementById('password').focus();
+          btn.disabled = false;
+          document.getElementById('p').value = '';
+          document.getElementById('p').focus();
         }
-      } catch(err) {
-        errTxt.textContent = 'Chyba připojení k serveru';
-        errEl.classList.add('show');
+      } catch {
+        errT.textContent = 'Chyba připojení k serveru';
+        err.classList.add('show');
         btn.classList.remove('loading');
+        btn.disabled = false;
       }
     }
 
-    function togglePass() {
-      const input = document.getElementById('password');
-      const icon = document.getElementById('eye-icon');
-      if (input.type === 'password') {
-        input.type = 'text';
-        icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+    function toggleEye() {
+      const inp = document.getElementById('p');
+      const svg = document.getElementById('eye-svg');
+      if (inp.type === 'password') {
+        inp.type = 'text';
+        svg.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
       } else {
-        input.type = 'password';
-        icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+        inp.type = 'password';
+        svg.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
       }
     }
 
-    // Fokus na username při načtení
-    window.addEventListener('load', () => {
-      document.getElementById('username').focus();
-    });
+    document.getElementById('u').focus();
   </script>
 </body>
 </html>
