@@ -250,7 +250,7 @@ function buildGoveeCard(device) {
   let html = `
     <div class="card-header">
       <div class="card-icon-name">
-        <div class="card-icon" style="${iconStyle}">🌈</div>
+        <div class="card-icon" style="${iconStyle}">📺</div>
         <div>
           <div class="card-name">${device.deviceName}</div>
           <div class="card-status ${isOnline?'online':'offline'}">${isOnline?'Online':'Offline'} · Govee</div>
