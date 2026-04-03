@@ -1,9 +1,47 @@
 /* =========================================================
    HomeOS — app.js  (v3)
    ========================================================= */
+
 let allDevices = [];
 let sensorRange = '24h';
 const charts = {};
+
+// ---- GLOBAL AUTH — přesměruj na login při 401 ----
+const _origFetch = window.fetch.bind(window);
+window.fetch = async (...args) => {
+  const res = await _origFetch(...args);
+  if (res.status === 401) {
+    window.location.href = '/login';
+    return res;
+  }
+  return res;
+};
+
+// ---- LOGOUT ----
+async function logout() {
+  await fetch('/logout', { method: 'POST' });
+  window.location.href = '/login';
+}
+
+// ---- PROFILE MENU (mobil) ----
+function toggleProfileMenu() {
+  const menu = document.getElementById('mobile-profile-menu');
+  const overlay = document.getElementById('mobile-profile-overlay');
+  const isOpen = menu?.classList.contains('open');
+  menu?.classList.toggle('open', !isOpen);
+  overlay?.classList.toggle('open', !isOpen);
+}
+
+// Načti username do profil menu
+async function loadUserInfo() {
+  try {
+    const res = await fetch('/api/auth/check');
+    const data = await res.json();
+    const el = document.getElementById('mpm-user');
+    if (el && data.username) el.textContent = data.username;
+  } catch(e) {}
+}
+loadUserInfo();
 
 // ---- NAVIGATION ----
 function navigateTo(page) {
@@ -249,7 +287,7 @@ function buildGoveeCard(device) {
   let html = `
     <div class="card-header">
       <div class="card-icon-name">
-        <div class="card-icon" style="${iconStyle}">📺</div>
+        <div class="card-icon" style="${iconStyle}">🌈</div>
         <div>
           <div class="card-name">${device.deviceName}</div>
           <div class="card-status ${isOnline?'online':'offline'}">${isOnline?'Online':'Offline'} · Govee</div>
@@ -1187,12 +1225,6 @@ function renderCompareStats(sensors) {
 
     el.innerHTML = rows || '';
   });
-}
-
-// ---- LOGOUT ----
-async function logout() {
-  await fetch('/logout', { method: 'POST' });
-  window.location.href = '/login';
 }
 
 // ---- INIT ----
