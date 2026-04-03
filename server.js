@@ -15,45 +15,31 @@ app.use(express.urlencoded({ extended: true }));
 
 // ---- SESSION ----
 app.use(session({
-    secret: process.env.SESSION_SECRET || 'homeos-secret-key-2024',
+    secret: process.env.SESSION_SECRET || 'homeos-secret-2024-xyz',
     resave: false,
     saveUninitialized: false,
-    cookie: {
-        httpOnly: true,
-        sameSite: 'lax'
-        // maxAge se nastaví dynamicky při loginu podle "remember me"
-    }
+    rolling: true, // obnoví maxAge při každém requestu
+    cookie: { httpOnly: true, sameSite: 'lax' }
 }));
 
-// ---- LOGIN CREDENTIALS ----
 const LOGIN_USER = process.env.LOGIN_USER || 'admin';
 const LOGIN_PASS = process.env.LOGIN_PASS || 'admin';
 
-// ---- AUTH MIDDLEWARE ----
-function requireAuth(req, res, next) {
-    if (req.session?.loggedIn) return next();
-    if (req.path.startsWith('/api/')) return res.status(401).json({ error: 'Nepřihlášen' });
-    res.redirect('/login');
-}
-
-// ---- LOGIN PAGE ----
+// ---- PUBLIC routes (bez auth) ----
 app.get('/login', (req, res) => {
     if (req.session?.loggedIn) return res.redirect('/');
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
-// ---- LOGIN POST ----
 app.post('/login', (req, res) => {
     const { username, password, remember } = req.body;
     if (username === LOGIN_USER && password === LOGIN_PASS) {
         req.session.loggedIn = true;
         req.session.username = username;
-        // remember = true → 30 dní, jinak session cookie (smaže se po zavření prohlížeče)
         if (remember) {
             req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000; // 30 dní
         } else {
-            req.session.cookie.maxAge = null; // session cookie
-            req.session.cookie.expires = false;
+            req.session.cookie.expires = false; // session cookie
         }
         res.json({ success: true });
     } else {
@@ -61,20 +47,30 @@ app.post('/login', (req, res) => {
     }
 });
 
-// ---- LOGOUT ----
 app.post('/logout', (req, res) => {
-    req.session.destroy();
-    res.json({ success: true });
+    req.session.destroy(() => {
+        res.json({ success: true });
+    });
 });
 
-// ---- CHECK AUTH ----
+// ---- AUTH MIDDLEWARE ----
+function requireAuth(req, res, next) {
+    if (req.session?.loggedIn) return next();
+    if (req.path.startsWith('/api/')) {
+        return res.status(401).json({ error: 'Nepřihlášen', redirect: '/login' });
+    }
+    res.redirect('/login');
+}
+
 app.get('/api/auth/check', (req, res) => {
     res.json({ loggedIn: !!req.session?.loggedIn, username: req.session?.username || '' });
 });
 
-// ---- Chráněné statické soubory + API ----
-app.use('/api', requireAuth);
+// ---- CHRÁNĚNÉ statické soubory ----
 app.use(requireAuth, express.static(path.join(__dirname, 'public')));
+
+// ---- CHRÁNĚNÉ API ----
+app.use('/api', requireAuth);
 
 const { TUYA_CLIENT_ID, TUYA_CLIENT_SECRET, TUYA_BASE_URL } = process.env;
 
