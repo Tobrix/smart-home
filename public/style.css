@@ -281,42 +281,60 @@ body { display:flex; }
 
 /* ============================================
    MOBIL 600px — iOS Safari + PWA
+   Tab bar DOLE jako iOS appka
    ============================================ */
 @media (max-width:600px) {
   .sidebar { display:none; }
   .mobile-tabbar { display:flex; }
   .mobile-profile-menu, .mobile-profile-overlay { display:block; }
 
-  html, body { height:100%; background:var(--bg); }
-  body { flex-direction:column; overflow:hidden; }
-
-  /* ---- TAB BAR NAHOŘE ---- */
-  .mobile-tabbar {
-    /* position:relative — součást flex flow, ne fixed */
-    position:relative;
-    width:100%; flex-shrink:0;
-    display:flex; justify-content:space-around; align-items:flex-end;
-    /* Výška = 50px ikonek + iOS notch/Dynamic Island nahoře */
-    padding-top:env(safe-area-inset-top, 0px);
-    padding-bottom:6px;
-    height:calc(50px + env(safe-area-inset-top, 0px));
-    background:rgba(12,14,18,0.98);
-    backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
-    border-bottom:1px solid var(--border);
-    z-index:200;
+  /* Celý viewport */
+  html { height:100%; }
+  body {
+    flex-direction:column;
+    height:100%;
+    overflow:hidden;
+    background:var(--bg);
   }
 
-  /* ---- MAIN scrolluje pod tab barem ---- */
+  /* ---- MAIN — scrolluje, padding-top pro notch, padding-bottom pro tab bar ---- */
   .main {
-    flex:1; min-height:0; width:100%;
-    overflow-y:auto; -webkit-overflow-scrolling:touch;
+    order:1;           /* main je první */
+    flex:1;
+    min-height:0;
+    width:100%;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
     background:var(--bg);
-    /* Padding dole = home indicator */
-    padding-bottom:env(safe-area-inset-bottom, 16px);
+    /* Odsaď obsah od notche nahoře */
+    padding-top:env(safe-area-inset-top, 0px);
+    /* Odsaď obsah od tab baru + home indicatoru dole */
+    padding-bottom:calc(56px + env(safe-area-inset-bottom, 0px));
   }
 
   /* ---- STRÁNKY ---- */
-  .page { padding:16px 14px 32px; gap:14px; height:auto; overflow:visible; }
+  .page {
+    padding:16px 14px 16px;
+    gap:14px; height:auto; overflow:visible;
+  }
+
+  /* ---- TAB BAR — DOLE, fixed, s home indicator ---- */
+  .mobile-tabbar {
+    order:2;          /* tab bar je druhý = dole */
+    position:fixed;   /* fixed = vždy dole bez ohledu na scroll */
+    bottom:0; left:0; right:0;
+    /* Výška 56px ikonek + iOS home indicator dole */
+    height:calc(56px + env(safe-area-inset-bottom, 0px));
+    display:flex;
+    justify-content:space-around;
+    align-items:flex-start;  /* ikony od vrchu, home indicator dole */
+    padding-top:8px;
+    padding-bottom:env(safe-area-inset-bottom, 0px);
+    background:rgba(12,14,18,0.97);
+    backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+    border-top:1px solid var(--border);
+    z-index:200;
+  }
 
   /* ---- TOPBAR ---- */
   .topbar { flex-direction:column; gap:10px; flex-shrink:0; }
@@ -347,12 +365,12 @@ body { display:flex; }
   .compare-stat-vals { width:100%; display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
   .compare-stat-item { min-width:0; padding:6px 8px; }
 
-  /* ---- MODAL bottom sheet ---- */
+  /* ---- MODAL bottom sheet — nad tab barem ---- */
   .modal {
     width:100%; max-width:100%; border-radius:20px 20px 0 0;
     position:fixed; bottom:0; left:0;
     max-height:85dvh; overflow-y:auto;
-    padding-bottom:env(safe-area-inset-bottom, 16px);
+    padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 8px);
   }
   .modal-overlay { align-items:flex-end; }
 
@@ -362,16 +380,16 @@ body { display:flex; }
 
   /* ---- TAB POLOŽKY ---- */
   .mobile-tab {
-    display:flex; flex-direction:column; align-items:center; gap:1px;
+    display:flex; flex-direction:column; align-items:center; gap:2px;
     color:var(--sub); text-decoration:none;
     font-size:9px; font-weight:500; letter-spacing:0.01em;
-    padding:2px 6px; border-radius:8px; transition:color 0.18s;
+    padding:2px 4px; border-radius:8px; transition:color 0.18s;
     background:none; border:none; cursor:pointer;
     font-family:var(--font);
     flex:1; min-width:0;
   }
   .mobile-tab svg {
-    width:20px; height:20px; stroke:currentColor; fill:none;
+    width:22px; height:22px; stroke:currentColor; fill:none;
     stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round;
     flex-shrink:0;
   }
@@ -379,7 +397,7 @@ body { display:flex; }
   .mobile-tab.active { color:var(--accent); }
   .mobile-tab.active svg { stroke:var(--accent); }
 
-  /* ---- PROFIL MENU (bottom sheet) ---- */
+  /* ---- PROFIL BOTTOM SHEET ---- */
   .mobile-profile-overlay {
     display:none; position:fixed; inset:0;
     background:rgba(0,0,0,0.6); backdrop-filter:blur(6px);
@@ -388,11 +406,14 @@ body { display:flex; }
   .mobile-profile-overlay.open { display:block; }
 
   .mobile-profile-menu {
-    display:none; position:fixed; bottom:0; left:0; right:0;
+    display:none; position:fixed;
+    /* Nad tab barem */
+    bottom:calc(56px + env(safe-area-inset-bottom, 0px));
+    left:0; right:0;
     background:var(--surface);
     border:1px solid var(--border2);
     border-radius:20px 20px 0 0;
-    padding:20px 20px env(safe-area-inset-bottom, 20px);
+    padding:20px 20px 24px;
     z-index:400;
     transform:translateY(100%);
     transition:transform 0.3s cubic-bezier(0.2,0.8,0.2,1);
@@ -401,7 +422,6 @@ body { display:flex; }
     display:block;
     transform:translateY(0);
   }
-  /* Handle */
   .mobile-profile-menu::before {
     content:''; display:block; width:36px; height:4px;
     background:var(--border2); border-radius:2px;
