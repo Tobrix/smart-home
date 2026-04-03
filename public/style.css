@@ -299,17 +299,16 @@ body { display:flex; }
 
   /* ---- MAIN — scrolluje, padding-top pro notch, padding-bottom pro tab bar ---- */
   .main {
-    order:1;           /* main je první */
+    order:1;
     flex:1;
     min-height:0;
     width:100%;
     overflow-y:auto;
     -webkit-overflow-scrolling:touch;
     background:var(--bg);
-    /* Odsaď obsah od notche nahoře */
     padding-top:env(safe-area-inset-top, 0px);
-    /* Odsaď obsah od tab baru + home indicatoru dole */
-    padding-bottom:calc(56px + env(safe-area-inset-bottom, 0px));
+    /* Tab bar je cca 50px + home indicator (max ~34px) = buffer 90px */
+    padding-bottom:calc(90px + env(safe-area-inset-bottom, 0px));
   }
 
   /* ---- STRÁNKY ---- */
@@ -320,16 +319,16 @@ body { display:flex; }
 
   /* ---- TAB BAR — DOLE, fixed, s home indicator ---- */
   .mobile-tabbar {
-    order:2;          /* tab bar je druhý = dole */
-    position:fixed;   /* fixed = vždy dole bez ohledu na scroll */
+    position:fixed;
     bottom:0; left:0; right:0;
-    /* Výška 56px ikonek + iOS home indicator dole */
-    height:calc(56px + env(safe-area-inset-bottom, 0px));
+    /* Žádná pevná height — jen padding definuje velikost */
+    height:auto;
     display:flex;
     justify-content:space-around;
-    align-items:flex-start;  /* ikony od vrchu, home indicator dole */
-    padding-top:8px;
-    padding-bottom:env(safe-area-inset-bottom, 0px);
+    align-items:center;
+    /* Prostor pro ikony nahoře, home indicator dole */
+    padding-top:10px;
+    padding-bottom:max(env(safe-area-inset-bottom, 0px), 16px);
     background:rgba(12,14,18,0.97);
     backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
     border-top:1px solid var(--border);
@@ -407,8 +406,7 @@ body { display:flex; }
 
   .mobile-profile-menu {
     display:none; position:fixed;
-    /* Nad tab barem */
-    bottom:calc(56px + env(safe-area-inset-bottom, 0px));
+    bottom:calc(50px + max(env(safe-area-inset-bottom, 0px), 16px));
     left:0; right:0;
     background:var(--surface);
     border:1px solid var(--border2);
