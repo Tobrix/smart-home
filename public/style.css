@@ -1,40 +1,48 @@
-/* ==============================================
-   HomeOS — style.css  (kompletní přepis)
-   ============================================== */
+/* ================================================
+   HomeOS — style.css
+   iOS layout technika převzatá z fungujícího projektu:
+   html+body mají height:100vh + overflow:hidden,
+   na mobilu se přepne na position:fixed inset:0
+   ================================================ */
 
-/* ---- PROMĚNNÉ ---- */
 :root {
-  --bg:       #0b0d11;
-  --s1:       #13161e;
-  --s2:       #1a1e2a;
-  --s3:       #222736;
-  --border:   rgba(255,255,255,0.06);
-  --border2:  rgba(255,255,255,0.12);
-  --text:     #e8eaf0;
-  --sub:      rgba(232,234,240,0.42);
-  --accent:   #4f8ef7;
-  --accent2:  #7c6af7;
-  --green:    #3ecf8e;
-  --yellow:   #f5a623;
-  --red:      #f25f5c;
-  --r:        12px;
-  --rsm:      8px;
-  --font:     'DM Sans', sans-serif;
-  --mono:     'DM Mono', monospace;
-  --sidebar:  220px;
+  --bg:      #0b0d11;
+  --s1:      #13161e;
+  --s2:      #1a1e2a;
+  --s3:      #222736;
+  --border:  rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.12);
+  --text:    #e8eaf0;
+  --sub:     rgba(232,234,240,0.42);
+  --accent:  #4f8ef7;
+  --accent2: #7c6af7;
+  --green:   #3ecf8e;
+  --yellow:  #f5a623;
+  --red:     #f25f5c;
+  --r:       12px;
+  --rsm:     8px;
+  --font:    'DM Sans', sans-serif;
+  --mono:    'DM Mono', monospace;
+  --sw:      220px;
 }
 
-/* ---- RESET ---- */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-html { height: 100%; }
-body {
-  height: 100%; font-family: var(--font); font-size: 14px;
-  color: var(--text); background: var(--bg);
-  -webkit-font-smoothing: antialiased; overflow: hidden;
-  display: flex; flex-direction: row;
+
+/* Stejná technika jako fungující projekt */
+html, body {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* ---- NOISE TEXTURE ---- */
+body { display: flex; flex-direction: row; }
+
+/* NOISE */
 .noise {
   position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.025;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -43,7 +51,7 @@ body {
 
 /* ---- SIDEBAR ---- */
 .sidebar {
-  width: var(--sidebar); height: 100vh; flex-shrink: 0;
+  width: var(--sw); height: 100vh; flex-shrink: 0;
   background: var(--s1); border-right: 1px solid var(--border);
   display: flex; flex-direction: column; padding: 20px 12px;
   position: relative; z-index: 10;
@@ -65,11 +73,11 @@ body {
 .logout-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; flex-shrink: 0; }
 .logout-btn:hover { color: var(--red); border-color: rgba(242,95,92,0.4); background: rgba(242,95,92,0.06); }
 
-/* ---- MAIN AREA ---- */
+/* ---- MAIN ---- */
 .main { flex: 1; min-width: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
 /* ---- PAGES ---- */
-.page { display: none; flex-direction: column; gap: 20px; padding: 28px 32px; overflow-y: auto; flex: 1; }
+.page { display: none; flex-direction: column; gap: 20px; padding: 28px 32px; overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
 .page.active { display: flex; }
 .page::-webkit-scrollbar { width: 4px; }
 .page::-webkit-scrollbar-track { background: transparent; }
@@ -142,7 +150,7 @@ body {
 /* ---- BATTERY ---- */
 .battery-row { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--sub); }
 .battery-bar { flex: 1; height: 3px; background: var(--s3); border-radius: 2px; overflow: hidden; }
-.battery-fill { height: 100%; background: var(--green); border-radius: 2px; transition: width 0.4s; }
+.battery-fill { height: 100%; background: var(--green); border-radius: 2px; }
 .battery-fill.low { background: var(--red); }
 .battery-fill.mid { background: var(--yellow); }
 
@@ -152,7 +160,7 @@ body {
 .slider { appearance: none; width: 100%; height: 4px; border-radius: 2px; background: var(--s3); outline: none; cursor: pointer; }
 .slider::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 0 3px rgba(79,142,247,0.2); }
 
-/* ---- POWER CHIPS ---- */
+/* ---- POWER ---- */
 .power-row { display: flex; gap: 6px; }
 .power-chip { flex: 1; background: var(--s2); border-radius: var(--rsm); padding: 8px; text-align: center; font-size: 10px; color: var(--sub); text-transform: uppercase; letter-spacing: 0.05em; }
 .power-chip strong { display: block; font-family: var(--mono); font-size: 14px; color: var(--text); font-weight: 500; margin-bottom: 1px; letter-spacing: 0; }
@@ -160,8 +168,6 @@ body {
 .detail-btn:hover { color: var(--text); border-color: var(--border2); background: var(--s2); }
 .energy-total { font-size: 12px; color: var(--sub); }
 .energy-total strong { color: var(--yellow); }
-
-/* ---- POWER GAUGE ---- */
 .power-gauge-wrap { display: flex; align-items: center; gap: 14px; }
 .power-gauge { width: 78px; height: 78px; flex-shrink: 0; }
 .gauge-info { display: flex; flex-direction: column; gap: 3px; }
@@ -234,7 +240,7 @@ body {
 /* ---- COLOR PALETTE ---- */
 .color-palette { display: flex; flex-direction: column; gap: 8px; }
 .palette-row { display: flex; gap: 6px; }
-.color-swatch { flex: 1; height: 34px; border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; position: relative; overflow: hidden; }
+.color-swatch { flex: 1; height: 34px; border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; }
 .color-swatch:hover { transform: scale(1.06); border-color: rgba(255,255,255,0.4); }
 .color-swatch.active { border-color: white; transform: scale(1.06); }
 .custom-color-row { display: flex; gap: 10px; align-items: center; }
@@ -248,18 +254,21 @@ body {
 .govee-card.is-on { border-color: rgba(124,106,247,0.35); background: linear-gradient(150deg, var(--s1) 60%, rgba(124,106,247,0.06)); }
 .govee-card.is-on .card-icon { background: rgba(124,106,247,0.2); }
 
-/* ---- MOBILE ELEMENTS — skryté na PC ---- */
-.mobile-tabbar, .mobile-profile-overlay, .mobile-profile-menu { display: none; }
+/* ---- MOBILE — skryté na desktopu ---- */
+.mobile-tabbar { display: none !important; }
+.mobile-profile-overlay { display: none; }
+.mobile-profile-menu { display: none; }
 
-/* ============================================================
+/* ================================================
    TABLET 960px
-   ============================================================ */
+   ================================================ */
 @media (max-width: 960px) {
-  :root { --sidebar: 58px; }
+  :root { --sw: 58px; }
   .sidebar-logo > span, .nav-link span, .conn-status span, .logout-btn span { display: none; }
-  .nav-link { justify-content: center; padding: 10px; }
+  .nav-link, .logout-btn { justify-content: center; }
+  .nav-link { padding: 10px; }
+  .logout-btn { padding: 8px; }
   .sidebar-logo { justify-content: center; padding-bottom: 16px; }
-  .logout-btn { justify-content: center; padding: 8px; }
   .conn-status { justify-content: center; }
   .stats-row { grid-template-columns: 1fr 1fr; }
   .page { padding: 20px 16px; }
@@ -269,131 +278,159 @@ body {
   .compare-stat-item { flex: 1; }
 }
 
-/* ============================================================
-   MOBIL 600px — kompletní přepis bez hacků
-   Princip: body je flex column, .main roste, .mobile-tabbar je
-   pevně na konci. Žádný position:fixed na tab baru.
-   ============================================================ */
+/* ================================================
+   MOBIL 600px — iOS Safari + PWA
+   
+   KLÍČOVÁ TECHNIKA z fungujícího projektu:
+   Místo height:100vh (který se mění se Safari lištou)
+   použijeme position:fixed s inset:0 — toto VŽDY
+   zaujme přesně celou obrazovku bez ohledu na to
+   jestli je Safari lišta viditelná nebo ne, a funguje
+   stejně v Safari i v PWA módu přidaném na plochu.
+   ================================================ */
 @media (max-width: 600px) {
 
-  /* 1) Celý viewport je flex sloupec */
+  /* Skryj scrollbary */
+  * { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+  ::-webkit-scrollbar { display: none !important; width: 0 !important; }
+
+  /* Sidebar pryč */
+  .sidebar { display: none !important; }
+
+  /* KLÍČ: body vyplní přesně celou obrazovku pomocí position:fixed */
   html, body {
-    height: 100%;
-    height: 100dvh; /* dynamic viewport — funguje v Safari i PWA */
-    overflow: hidden;
-  }
-  body {
-    flex-direction: column;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    flex-direction: column !important;
   }
 
-  /* 2) Sidebar pryč */
-  .sidebar { display: none; }
-
-  /* 3) Main roste a scrolluje uvnitř */
+  /* Main = vše nad tab barem */
   .main {
-    flex: 1;
-    min-height: 0;       /* flexový trik — bez toho by přeteklo */
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+    flex: 1 !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
 
-  /* 4) Každá page scrolluje */
+  /* Každá stránka scrolluje uvnitř */
   .page {
-    flex: 1;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    padding: 14px 14px 20px;
-    gap: 12px;
-    height: auto;
+    flex: 1 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 14px 14px !important;
+    /* Odsazení od notche */
+    padding-top: calc(env(safe-area-inset-top, 0px) + 14px) !important;
+    /* Odsazení dole */
+    padding-bottom: 20px !important;
+    gap: 12px !important;
+    height: auto !important;
   }
 
-  /* 5) Tab bar — na konci flex sloupce, přirozená výška */
+  /* TAB BAR — flex-shrink:0 na konci body flex sloupce */
   .mobile-tabbar {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-around;
-    align-items: center;
-    flex-shrink: 0;          /* nikdy se nezmenší */
-    width: 100%;
-    /* Padding pro iOS home indicator */
-    padding-top: 8px;
-    padding-bottom: env(safe-area-inset-bottom, 8px);
-    background: rgba(11,13,17,0.98);
-    border-top: 1px solid var(--border);
-    /* Žádný position:fixed — je přirozený prvek na konci body */
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-around !important;
+    align-items: center !important;
+    flex-shrink: 0 !important;
+    width: 100% !important;
+    /* Výška: 50px ikony + home indicator */
+    padding-top: 8px !important;
+    padding-bottom: env(safe-area-inset-bottom, 8px) !important;
+    background: rgba(11,13,17,0.98) !important;
+    border-top: 1px solid var(--border) !important;
+    position: relative !important; /* NE fixed — je součástí flow */
+    z-index: 50 !important;
   }
 
-  /* 6) Tab položky */
+  /* Tab items */
   .mobile-tab {
-    display: flex; flex-direction: column; align-items: center; gap: 2px;
-    color: var(--sub); text-decoration: none;
-    font-size: 9px; font-weight: 500;
-    padding: 2px 4px; flex: 1; min-width: 0;
-    background: none; border: none; cursor: pointer;
-    font-family: var(--font); transition: color 0.15s;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 2px !important;
+    color: var(--sub) !important;
+    text-decoration: none !important;
+    font-size: 9px !important;
+    font-weight: 500 !important;
+    padding: 2px 4px !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+    background: none !important;
+    border: none !important;
+    cursor: pointer !important;
+    font-family: var(--font) !important;
+    transition: color 0.15s !important;
   }
-  .mobile-tab svg { width: 21px; height: 21px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-  .mobile-tab span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-  .mobile-tab.active { color: var(--accent); }
-  .mobile-tab.active svg { stroke: var(--accent); }
+  .mobile-tab svg { width: 21px !important; height: 21px !important; stroke: currentColor !important; fill: none !important; stroke-width: 1.8 !important; stroke-linecap: round !important; stroke-linejoin: round !important; }
+  .mobile-tab span { white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; max-width: 100% !important; }
+  .mobile-tab.active { color: var(--accent) !important; }
+  .mobile-tab.active svg { stroke: var(--accent) !important; }
 
-  /* 7) Profil menu — position:fixed je OK pro overlay */
+  /* PROFIL MENU */
   .mobile-profile-overlay {
-    position: fixed; inset: 0; z-index: 300;
-    background: rgba(0,0,0,0.55); backdrop-filter: blur(6px);
-    display: none;
+    position: fixed !important; inset: 0 !important; z-index: 300 !important;
+    background: rgba(0,0,0,0.55) !important; backdrop-filter: blur(6px) !important;
+    display: none !important;
   }
-  .mobile-profile-overlay.open { display: block; }
+  .mobile-profile-overlay.open { display: block !important; }
 
   .mobile-profile-menu {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 400;
-    background: var(--s1); border-top: 1px solid var(--border2);
-    border-radius: 18px 18px 0 0;
-    padding: 16px 20px;
-    padding-bottom: max(env(safe-area-inset-bottom, 16px), 16px);
-    display: none;
-    transform: translateY(100%);
-    transition: transform 0.28s cubic-bezier(0.2,0.8,0.2,1);
+    position: fixed !important; left: 0 !important; right: 0 !important; bottom: 0 !important; z-index: 400 !important;
+    background: var(--s1) !important; border-top: 1px solid var(--border2) !important;
+    border-radius: 18px 18px 0 0 !important;
+    padding: 16px 20px !important;
+    padding-bottom: max(env(safe-area-inset-bottom, 16px), 16px) !important;
+    display: none !important;
+    transform: translateY(100%) !important;
+    transition: transform 0.28s cubic-bezier(0.2,0.8,0.2,1) !important;
   }
-  .mobile-profile-menu.open { display: block; transform: translateY(0); }
-  .mobile-profile-menu::before { content: ''; display: block; width: 36px; height: 4px; background: var(--border2); border-radius: 2px; margin: 0 auto 18px; }
+  .mobile-profile-menu.open { display: block !important; transform: translateY(0) !important; }
+  .mobile-profile-menu::before { content: '' !important; display: block !important; width: 36px !important; height: 4px !important; background: var(--border2) !important; border-radius: 2px !important; margin: 0 auto 18px !important; }
 
-  .mpm-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-  .mpm-icon { width: 42px; height: 42px; border-radius: 12px; font-size: 19px; background: linear-gradient(135deg,var(--accent),var(--accent2)); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .mpm-name { font-size: 15px; font-weight: 600; }
-  .mpm-user { font-size: 12px; color: var(--sub); margin-top: 2px; font-family: var(--mono); }
-  .mpm-divider { height: 1px; background: var(--border); margin: 4px 0 12px; }
-  .mpm-btn { width: 100%; display: flex; align-items: center; gap: 12px; background: var(--s2); border: 1px solid var(--border); border-radius: 11px; color: var(--text); font-family: var(--font); font-size: 14px; font-weight: 500; padding: 13px 14px; cursor: pointer; margin-bottom: 8px; text-align: left; transition: background 0.15s; }
-  .mpm-btn svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; flex-shrink: 0; }
-  .mpm-btn:active { background: var(--s3); }
-  .mpm-logout { color: var(--red); border-color: rgba(242,95,92,0.2); background: rgba(242,95,92,0.06); }
-  .mpm-logout svg { stroke: var(--red); }
-  .mpm-close { color: var(--sub); background: none; }
+  .mpm-header { display: flex !important; align-items: center !important; gap: 12px !important; margin-bottom: 16px !important; }
+  .mpm-icon { width: 42px !important; height: 42px !important; border-radius: 12px !important; font-size: 19px !important; background: linear-gradient(135deg,var(--accent),var(--accent2)) !important; display: flex !important; align-items: center !important; justify-content: center !important; flex-shrink: 0 !important; }
+  .mpm-name { font-size: 15px !important; font-weight: 600 !important; }
+  .mpm-user { font-size: 12px !important; color: var(--sub) !important; margin-top: 2px !important; font-family: var(--mono) !important; }
+  .mpm-divider { height: 1px !important; background: var(--border) !important; margin: 4px 0 12px !important; }
+  .mpm-btn { width: 100% !important; display: flex !important; align-items: center !important; gap: 12px !important; background: var(--s2) !important; border: 1px solid var(--border) !important; border-radius: 11px !important; color: var(--text) !important; font-family: var(--font) !important; font-size: 14px !important; font-weight: 500 !important; padding: 13px 14px !important; cursor: pointer !important; margin-bottom: 8px !important; text-align: left !important; }
+  .mpm-btn svg { width: 17px !important; height: 17px !important; stroke: currentColor !important; fill: none !important; stroke-width: 1.8 !important; stroke-linecap: round !important; flex-shrink: 0 !important; }
+  .mpm-btn:active { background: var(--s3) !important; }
+  .mpm-logout { color: var(--red) !important; border-color: rgba(242,95,92,0.2) !important; background: rgba(242,95,92,0.06) !important; }
+  .mpm-logout svg { stroke: var(--red) !important; }
+  .mpm-close { color: var(--sub) !important; background: none !important; }
 
-  /* 8) Obsah stránek na mobilu */
-  .topbar { flex-direction: column; gap: 10px; }
-  .topbar-right { width: 100%; justify-content: space-between; }
-  .weather-widget { flex: 1; }
-  .clock-widget { text-align: left; }
-  .page-title { font-size: 20px; }
-  .stats-row { grid-template-columns: 1fr 1fr; gap: 8px; }
-  .stat-card { padding: 12px 12px; }
-  .stat-value { font-size: 20px; }
-  .stat-label { font-size: 10px; }
-  .devices-grid { grid-template-columns: 1fr; gap: 8px; }
-  .sensors-grid { grid-template-columns: 1fr; gap: 12px; }
-  .sensor-current { gap: 8px; }
-  .sensor-big .big-val { font-size: 22px; }
-  .chart-wrap { height: 95px; }
-  .chart-wrap.tall { height: 145px; }
-  .compare-stat-row { flex-direction: column; align-items: flex-start; gap: 8px; }
-  .compare-stat-name { font-size: 12px; }
-  .compare-stat-vals { width: 100%; display: grid; grid-template-columns: repeat(3,1fr); gap: 5px; }
-  .compare-stat-item { min-width: 0; padding: 5px 8px; }
-  .modal { width: 100%; max-width: 100%; border-radius: 18px 18px 0 0; position: fixed; bottom: 0; left: 0; max-height: 88vh; overflow-y: auto; padding-bottom: max(env(safe-area-inset-bottom, 16px), 16px); }
-  .modal-overlay { align-items: flex-end; }
-  .avg-btn { font-size: 11px; padding: 5px 10px; }
-  .power-gauge { width: 60px; height: 60px; }
-  .power-gauge-wrap { gap: 10px; }
+  /* OBSAH */
+  .topbar { flex-direction: column !important; gap: 10px !important; }
+  .topbar-right { width: 100% !important; justify-content: space-between !important; }
+  .weather-widget { flex: 1 !important; }
+  .clock-widget { text-align: left !important; }
+  .page-title { font-size: 20px !important; }
+  .stats-row { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  .stat-card { padding: 12px !important; }
+  .stat-value { font-size: 20px !important; }
+  .stat-label { font-size: 10px !important; }
+  .devices-grid { grid-template-columns: 1fr !important; gap: 8px !important; }
+  .sensors-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+  .sensor-current { gap: 8px !important; }
+  .sensor-big .big-val { font-size: 22px !important; }
+  .chart-wrap { height: 95px !important; }
+  .chart-wrap.tall { height: 145px !important; }
+  .compare-stat-row { flex-direction: column !important; align-items: flex-start !important; gap: 8px !important; }
+  .compare-stat-name { font-size: 12px !important; }
+  .compare-stat-vals { width: 100% !important; display: grid !important; grid-template-columns: repeat(3,1fr) !important; gap: 5px !important; }
+  .compare-stat-item { min-width: 0 !important; padding: 5px 8px !important; }
+  .modal { width: 100% !important; max-width: 100% !important; border-radius: 18px 18px 0 0 !important; position: fixed !important; bottom: 0 !important; left: 0 !important; max-height: 88vh !important; overflow-y: auto !important; padding-bottom: max(env(safe-area-inset-bottom, 16px), 16px) !important; }
+  .modal-overlay { align-items: flex-end !important; }
+  .avg-btn { font-size: 11px !important; padding: 5px 10px !important; }
+  .power-gauge { width: 60px !important; height: 60px !important; }
+  .power-gauge-wrap { gap: 10px !important; }
 }
