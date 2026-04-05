@@ -1,6 +1,6 @@
 /* =========================================================
    HomeOS — app.js  (v3)
-   ======================================================== */
+   ========================================================= */
 
 let allDevices = [];
 let sensorRange = '24h';
@@ -45,8 +45,8 @@ loadUserInfo();
 
 // ---- NAVIGATION ----
 function navigateTo(page) {
-  document.querySelectorAll('.nav-link').forEach(l => l.classList.toggle('active', l.dataset.page === page));
-  document.querySelectorAll('.mobile-tab').forEach(l => l.classList.toggle('active', l.dataset.page === page));
+  document.querySelectorAll('.nav-item').forEach(l => l.classList.toggle('active', l.dataset.page === page));
+  document.querySelectorAll('.mtab').forEach(l => l.classList.toggle('active', l.dataset.page === page));
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
   if (page === 'lights')  renderLights();
@@ -54,7 +54,7 @@ function navigateTo(page) {
   if (page === 'sensors') renderSensors();
 }
 
-document.querySelectorAll('.nav-link, .mobile-tab').forEach(link => {
+document.querySelectorAll('.nav-item, .mtab').forEach(link => {
   link.addEventListener('click', e => {
     e.preventDefault();
     navigateTo(link.dataset.page);
