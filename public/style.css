@@ -1,8 +1,8 @@
 /* ================================================
    HomeOS — style.css
-   iOS layout technika převzatá z fungujícího projektu:
-   html+body mají height:100vh + overflow:hidden,
-   na mobilu se přepne na position:fixed inset:0
+   iOS layout — stejná technika jako oneprime:
+   html+body { height: 100dvh } — dynamic viewport height
+   funguje v Safari i PWA bez jakýchkoliv hacků
    ================================================ */
 
 :root {
@@ -30,7 +30,7 @@
 
 /* Stejná technika jako fungující projekt */
 html, body {
-  height: 100vh;
+  height: 100dvh;
   width: 100vw;
   overflow: hidden;
   background: var(--bg);
@@ -51,7 +51,7 @@ body { display: flex; flex-direction: row; }
 
 /* ---- SIDEBAR ---- */
 .sidebar {
-  width: var(--sw); height: 100vh; flex-shrink: 0;
+  width: var(--sw); height: 100dvh; flex-shrink: 0;
   background: var(--s1); border-right: 1px solid var(--border);
   display: flex; flex-direction: column; padding: 20px 12px;
   position: relative; z-index: 10;
@@ -74,7 +74,7 @@ body { display: flex; flex-direction: row; }
 .logout-btn:hover { color: var(--red); border-color: rgba(242,95,92,0.4); background: rgba(242,95,92,0.06); }
 
 /* ---- MAIN ---- */
-.main { flex: 1; min-width: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+.main { flex: 1; min-width: 0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 
 /* ---- PAGES ---- */
 .page { display: none; flex-direction: column; gap: 20px; padding: 28px 32px; overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
@@ -281,12 +281,9 @@ body { display: flex; flex-direction: row; }
 /* ================================================
    MOBIL 600px — iOS Safari + PWA
    
-   KLÍČOVÁ TECHNIKA z fungujícího projektu:
-   Místo height:100vh (který se mění se Safari lištou)
-   použijeme position:fixed s inset:0 — toto VŽDY
-   zaujme přesně celou obrazovku bez ohledu na to
-   jestli je Safari lišta viditelná nebo ne, a funguje
-   stejně v Safari i v PWA módu přidaném na plochu.
+   TECHNIKA: 100dvh (dynamic viewport height)
+   Automaticky se přizpůsobuje Safari liště i PWA —
+   stejné řešení jako fungující projekt oneprime.
    ================================================ */
 @media (max-width: 600px) {
 
@@ -297,15 +294,10 @@ body { display: flex; flex-direction: row; }
   /* Sidebar pryč */
   .sidebar { display: none !important; }
 
-  /* KLÍČ: body vyplní přesně celou obrazovku pomocí position:fixed */
+  /* 100dvh = dynamic viewport height — funguje v Safari i PWA */
   html, body {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
     width: 100% !important;
-    height: 100% !important;
+    height: 100dvh !important;
     overflow: hidden !important;
     flex-direction: column !important;
   }
