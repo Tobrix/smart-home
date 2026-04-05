@@ -200,11 +200,23 @@
 
   <script src="app.js"></script>
   <script>
-    // Registrace Service Workera pro PWA
+    // ---- OPRAVA VÝŠKY PRO iOS PWA ----
+    // Nastaví CSS proměnnou --vh na skutečnou výšku viewportu.
+    // window.innerHeight je vždy správný — bez Safari lišty i v PWA.
+    function setVH() {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', vh + 'px');
+    }
+    setVH();
+    window.addEventListener('resize', setVH);
+    // Při orientaci musíme počkat na překreslení
+    window.addEventListener('orientationchange', () => setTimeout(setVH, 200));
+
+    // ---- SERVICE WORKER ----
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('[PWA] Service Worker registrován:', reg.scope))
+          .then(reg => console.log('[PWA] SW:', reg.scope))
           .catch(err => console.error('[PWA] SW chyba:', err));
       });
     }
