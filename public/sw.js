@@ -1,4 +1,4 @@
-const CACHE_NAME = 'homeos-v1';
+const CACHE_NAME = 'homeos-v10';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
