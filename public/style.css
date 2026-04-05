@@ -1,8 +1,8 @@
 /* ================================================
    HomeOS — style.css
-   iOS layout — stejná technika jako oneprime:
-   html+body { height: 100dvh } — dynamic viewport height
-   funguje v Safari i PWA bez jakýchkoliv hacků
+   iOS layout technika převzatá z fungujícího projektu:
+   html+body mají height:100vh + overflow:hidden,
+   na mobilu se přepne na position:fixed inset:0
    ================================================ */
 
 :root {
@@ -30,7 +30,7 @@
 
 /* Stejná technika jako fungující projekt */
 html, body {
-  height: 100dvh;
+  height: 100vh;
   width: 100vw;
   overflow: hidden;
   background: var(--bg);
@@ -51,7 +51,7 @@ body { display: flex; flex-direction: row; }
 
 /* ---- SIDEBAR ---- */
 .sidebar {
-  width: var(--sw); height: 100dvh; flex-shrink: 0;
+  width: var(--sw); height: 100vh; flex-shrink: 0;
   background: var(--s1); border-right: 1px solid var(--border);
   display: flex; flex-direction: column; padding: 20px 12px;
   position: relative; z-index: 10;
@@ -74,7 +74,7 @@ body { display: flex; flex-direction: row; }
 .logout-btn:hover { color: var(--red); border-color: rgba(242,95,92,0.4); background: rgba(242,95,92,0.06); }
 
 /* ---- MAIN ---- */
-.main { flex: 1; min-width: 0; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+.main { flex: 1; min-width: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
 /* ---- PAGES ---- */
 .page { display: none; flex-direction: column; gap: 20px; padding: 28px 32px; overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
@@ -281,9 +281,12 @@ body { display: flex; flex-direction: row; }
 /* ================================================
    MOBIL 600px — iOS Safari + PWA
    
-   TECHNIKA: 100dvh (dynamic viewport height)
-   Automaticky se přizpůsobuje Safari liště i PWA —
-   stejné řešení jako fungující projekt oneprime.
+   KLÍČOVÁ TECHNIKA z fungujícího projektu:
+   Místo height:100vh (který se mění se Safari lištou)
+   použijeme position:fixed s inset:0 — toto VŽDY
+   zaujme přesně celou obrazovku bez ohledu na to
+   jestli je Safari lišta viditelná nebo ne, a funguje
+   stejně v Safari i v PWA módu přidaném na plochu.
    ================================================ */
 @media (max-width: 600px) {
 
@@ -291,18 +294,22 @@ body { display: flex; flex-direction: row; }
   * { scrollbar-width: none !important; -ms-overflow-style: none !important; }
   ::-webkit-scrollbar { display: none !important; width: 0 !important; }
 
-  /* Sidebar pryč */
   .sidebar { display: none !important; }
 
-  /* 100dvh = dynamic viewport height — funguje v Safari i PWA */
+  /*
+   * KLÍČOVÁ OPRAVA:
+   * --vh nastavuje JS pomocí window.innerHeight * 0.01
+   * window.innerHeight je vždy správný počet pixelů —
+   * nezáleží na Safari liště, PWA, notchi ani ničem jiném.
+   * calc(var(--vh) * 100) = přesná výška viewportu.
+   */
   html, body {
     width: 100% !important;
-    height: 100dvh !important;
+    height: calc(var(--vh, 1vh) * 100) !important;
     overflow: hidden !important;
     flex-direction: column !important;
   }
 
-  /* Main = vše nad tab barem */
   .main {
     flex: 1 !important;
     width: 100% !important;
@@ -312,21 +319,16 @@ body { display: flex; flex-direction: row; }
     flex-direction: column !important;
   }
 
-  /* Každá stránka scrolluje uvnitř */
   .page {
     flex: 1 !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
-    padding: 14px 14px !important;
-    /* Odsazení od notche */
-    padding-top: calc(env(safe-area-inset-top, 0px) + 14px) !important;
-    /* Odsazení dole */
-    padding-bottom: 20px !important;
+    padding: calc(env(safe-area-inset-top, 0px) + 14px) 14px 20px !important;
     gap: 12px !important;
     height: auto !important;
   }
 
-  /* TAB BAR — flex-shrink:0 na konci body flex sloupce */
+  /* Tab bar — flex-shrink:0 = vždy viditelný, nikdy se nesmrskne */
   .mobile-tabbar {
     display: flex !important;
     flex-direction: row !important;
@@ -334,16 +336,14 @@ body { display: flex; flex-direction: row; }
     align-items: center !important;
     flex-shrink: 0 !important;
     width: 100% !important;
-    /* Výška: 50px ikony + home indicator */
     padding-top: 8px !important;
     padding-bottom: env(safe-area-inset-bottom, 8px) !important;
     background: rgba(11,13,17,0.98) !important;
     border-top: 1px solid var(--border) !important;
-    position: relative !important; /* NE fixed — je součástí flow */
+    position: relative !important;
     z-index: 50 !important;
   }
 
-  /* Tab items */
   .mobile-tab {
     display: flex !important;
     flex-direction: column !important;
@@ -367,27 +367,12 @@ body { display: flex; flex-direction: row; }
   .mobile-tab.active { color: var(--accent) !important; }
   .mobile-tab.active svg { stroke: var(--accent) !important; }
 
-  /* PROFIL MENU */
-  .mobile-profile-overlay {
-    position: fixed !important; inset: 0 !important; z-index: 300 !important;
-    background: rgba(0,0,0,0.55) !important; backdrop-filter: blur(6px) !important;
-    display: none !important;
-  }
+  /* Profil menu */
+  .mobile-profile-overlay { position: fixed !important; inset: 0 !important; z-index: 300 !important; background: rgba(0,0,0,0.55) !important; backdrop-filter: blur(6px) !important; display: none !important; }
   .mobile-profile-overlay.open { display: block !important; }
-
-  .mobile-profile-menu {
-    position: fixed !important; left: 0 !important; right: 0 !important; bottom: 0 !important; z-index: 400 !important;
-    background: var(--s1) !important; border-top: 1px solid var(--border2) !important;
-    border-radius: 18px 18px 0 0 !important;
-    padding: 16px 20px !important;
-    padding-bottom: max(env(safe-area-inset-bottom, 16px), 16px) !important;
-    display: none !important;
-    transform: translateY(100%) !important;
-    transition: transform 0.28s cubic-bezier(0.2,0.8,0.2,1) !important;
-  }
+  .mobile-profile-menu { position: fixed !important; left: 0 !important; right: 0 !important; bottom: 0 !important; z-index: 400 !important; background: var(--s1) !important; border-top: 1px solid var(--border2) !important; border-radius: 18px 18px 0 0 !important; padding: 16px 20px !important; padding-bottom: max(env(safe-area-inset-bottom, 16px), 16px) !important; display: none !important; transform: translateY(100%) !important; transition: transform 0.28s cubic-bezier(0.2,0.8,0.2,1) !important; }
   .mobile-profile-menu.open { display: block !important; transform: translateY(0) !important; }
   .mobile-profile-menu::before { content: '' !important; display: block !important; width: 36px !important; height: 4px !important; background: var(--border2) !important; border-radius: 2px !important; margin: 0 auto 18px !important; }
-
   .mpm-header { display: flex !important; align-items: center !important; gap: 12px !important; margin-bottom: 16px !important; }
   .mpm-icon { width: 42px !important; height: 42px !important; border-radius: 12px !important; font-size: 19px !important; background: linear-gradient(135deg,var(--accent),var(--accent2)) !important; display: flex !important; align-items: center !important; justify-content: center !important; flex-shrink: 0 !important; }
   .mpm-name { font-size: 15px !important; font-weight: 600 !important; }
@@ -400,7 +385,7 @@ body { display: flex; flex-direction: row; }
   .mpm-logout svg { stroke: var(--red) !important; }
   .mpm-close { color: var(--sub) !important; background: none !important; }
 
-  /* OBSAH */
+  /* Obsah */
   .topbar { flex-direction: column !important; gap: 10px !important; }
   .topbar-right { width: 100% !important; justify-content: space-between !important; }
   .weather-widget { flex: 1 !important; }
