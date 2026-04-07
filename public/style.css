@@ -38,7 +38,6 @@ body {
   color: var(--text);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
-  /* Flex column — topnav, mobile-tabs, main pod sebou */
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -157,9 +156,12 @@ body {
 ══════════════════════════════════ */
 .main {
   flex: 1;
+  min-height: 0;        /* flexový trik — bez tohoto přetéká */
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  /* Safe area dole — obsah dosáhne až k hraně */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* ══════════════════════════════════
@@ -463,10 +465,9 @@ body {
   /* Main — normální scroll, žádné haky */
   .main {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    /* Safe area dole */
-    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   .page { padding: 14px 14px 30px; gap: 14px; }
