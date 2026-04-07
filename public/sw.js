@@ -1,81 +1,58 @@
-const CACHE_NAME = 'homeos-v10';
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/app.js',
-  'https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap',
-  'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js'
-];
+// Pokaždé když změníš soubory, změň toto číslo verze
+const CACHE_VERSION = 'homeos-v20';
 
-// Instalace — cache statické soubory
+// Instalace — skipWaiting okamžitě převezme kontrolu
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      console.log('[SW] Caching static assets');
-      return cache.addAll(STATIC_ASSETS);
-    })
-  );
+  console.log('[SW] Install:', CACHE_VERSION);
   self.skipWaiting();
 });
 
-// Aktivace — vymaž staré cache
+// Aktivace — smaž VŠECHNY staré cache
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+    caches.keys().then(keys => {
+      return Promise.all(
+        keys.map(key => {
+          console.log('[SW] Deleting old cache:', key);
+          return caches.delete(key); // smaž vše, nejen starší verze
+        })
+      );
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// Fetch — network first pro API, cache first pro statiku
+// Fetch — NETWORK FIRST pro HTML/CSS/JS, cache jen jako fallback
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // API requesty — vždy síť, nikdy cache
-  if (url.pathname.startsWith('/api/')) {
+  // API — vždy síť
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/login') || url.pathname.startsWith('/logout')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // HTML, CSS, JS — network first, bez cache
+  if (url.origin === self.location.origin) {
     event.respondWith(
-      fetch(event.request).catch(() =>
-        new Response(JSON.stringify({ error: 'Offline — API nedostupné' }), {
-          headers: { 'Content-Type': 'application/json' }
-        })
-      )
+      fetch(event.request, { cache: 'no-store' }).catch(() => {
+        // Offline fallback — zkus cache
+        return caches.match(event.request);
+      })
     );
     return;
   }
 
-  // Statické soubory — cache first, pak síť
+  // Externí zdroje (fonty, CDN) — cache first
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
       return fetch(event.request).then(response => {
-        // Cachuj úspěšné GET requesty
-        if (event.request.method === 'GET' && response.status === 200) {
+        if (response.status === 200) {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          caches.open(CACHE_VERSION).then(cache => cache.put(event.request, clone));
         }
         return response;
       });
     })
   );
-});
-
-// Push notifikace (příprava pro budoucí použití)
-self.addEventListener('push', event => {
-  const data = event.data?.json() || {};
-  event.waitUntil(
-    self.registration.showNotification(data.title || 'HomeOS', {
-      body: data.body || '',
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-192.png',
-      vibrate: [100, 50, 100],
-      data: { url: data.url || '/' }
-    })
-  );
-});
-
-self.addEventListener('notificationclick', event => {
-  event.notification.close();
-  event.waitUntil(clients.openWindow(event.notification.data.url));
 });
