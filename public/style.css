@@ -30,7 +30,11 @@
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-html { height: 100%; }
+html {
+  height: 100%;
+  /* Background sahá za safe area = za home indicator */
+  background: var(--bg);
+}
 body {
   height: 100%;
   font-family: var(--font);
@@ -156,18 +160,22 @@ body {
 ══════════════════════════════════ */
 .main {
   flex: 1;
-  min-height: 0;        /* flexový trik — bez tohoto přetéká */
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  /* Safe area dole — obsah dosáhne až k hraně */
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: var(--bg);
 }
 
-/* ══════════════════════════════════
-   PAGES
-══════════════════════════════════ */
-.page { display: none; padding: 28px 32px; flex-direction: column; gap: 22px; }
+/* Stránky — padding-bottom zahrnuje home indicator */
+.page {
+  display: none;
+  padding: 28px 32px;
+  /* Spodní padding = normální + safe area pro home indicator */
+  padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+  flex-direction: column;
+  gap: 22px;
+}
 .page.active { display: flex; }
 
 .page-header {
@@ -468,9 +476,14 @@ body {
     min-height: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    background: var(--bg);
   }
 
-  .page { padding: 14px 14px 30px; gap: 14px; }
+  .page {
+    padding: 14px 14px;
+    padding-bottom: calc(30px + env(safe-area-inset-bottom, 0px));
+    gap: 14px;
+  }
 
   .page-header { gap: 10px; }
   .page-title { font-size: 19px; }
