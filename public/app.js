@@ -1,19 +1,16 @@
 /* =========================================================
-   HomeOS — app.js  (v3)
+   HomeOS — app.js (v4 — Color Wheel + Redesign)
    ========================================================= */
 
 let allDevices = [];
 let sensorRange = '24h';
 const charts = {};
 
-// ---- GLOBAL AUTH — přesměruj na login při 401 ----
+// ---- GLOBAL AUTH ----
 const _origFetch = window.fetch.bind(window);
 window.fetch = async (...args) => {
   const res = await _origFetch(...args);
-  if (res.status === 401) {
-    window.location.href = '/login';
-    return res;
-  }
+  if (res.status === 401) { window.location.href = '/login'; return res; }
   return res;
 };
 
@@ -23,16 +20,7 @@ async function logout() {
   window.location.href = '/login';
 }
 
-// ---- PROFILE MENU (mobil) ----
-function toggleProfileMenu() {
-  const menu = document.getElementById('mobile-profile-menu');
-  const overlay = document.getElementById('mobile-profile-overlay');
-  const isOpen = menu?.classList.contains('open');
-  menu?.classList.toggle('open', !isOpen);
-  overlay?.classList.toggle('open', !isOpen);
-}
-
-// Načti username do profil menu
+// ---- USER INFO ----
 async function loadUserInfo() {
   try {
     const res = await fetch('/api/auth/check');
@@ -57,7 +45,7 @@ function navigateTo(page) {
 document.querySelectorAll('.nav-item, .mtab').forEach(link => {
   link.addEventListener('click', e => {
     e.preventDefault();
-    navigateTo(link.dataset.page);
+    if (link.dataset.page) navigateTo(link.dataset.page);
   });
 });
 
@@ -90,7 +78,7 @@ async function loadWeather() {
     document.getElementById('weather-temp').textContent = Math.round(cw.temperature) + '°C';
     document.getElementById('weather-icon').textContent = weatherIcon(cw.weathercode);
     document.getElementById('weather-desc').textContent = weatherDesc(cw.weathercode);
-  } catch(e) { document.getElementById('weather-desc').textContent = 'N/A'; }
+  } catch(e) { if(document.getElementById('weather-desc')) document.getElementById('weather-desc').textContent = 'N/A'; }
 }
 function weatherIcon(c) {
   if (c===0) return '☀️'; if (c<=2) return '🌤️'; if (c===3) return '☁️';
@@ -112,7 +100,6 @@ function deviceType(device) {
   if (codes.includes('va_temperature') || codes.includes('va_humidity')) return 'sensor';
   if (codes.includes('switch_led')) return 'light';
   if (codes.includes('switch')) return 'plug';
-  // Zigbee scene switches / buttons — read only
   if (codes.some(c => c.includes('switch1_value') || c.includes('switch_mode') || c.includes('switch_mode1'))) return 'button';
   return 'other';
 }
@@ -120,11 +107,7 @@ function deviceType(device) {
 function deviceIcon(type, name) {
   const n = name.toLowerCase();
   if (type === 'sensor') return '🌡️';
-  if (type === 'button') {
-    if (n.includes('vánoce') || n.includes('vanocn')) return '🎄';
-    if (n.includes('gang') || n.includes('zigbee') || n.includes('m4')) return '🔘';
-    return '🔘';
-  }
+  if (type === 'button') return '🔘';
   if (type === 'light') {
     if (n.includes('postel')) return '🛏️';
     if (n.includes('gauč') || n.includes('gauc')) return '🛋️';
@@ -139,30 +122,24 @@ function deviceIcon(type, name) {
 }
 
 // ---- GOVEE STATE ----
-let goveeDevices = []; // { device, model, deviceName, controllable, online, properties }
+let goveeDevices = [];
 
 async function loadGoveeDevices() {
   try {
     const res = await fetch('/api/govee/devices');
     const data = await res.json();
-    // OpenAPI v2 vrací { code, message, data: [ {sku, device, deviceName, type, capabilities} ] }
     const raw = data.data || [];
-
     goveeDevices = await Promise.all(raw.map(async d => {
       try {
         const stateRes = await fetch(`/api/govee/device/state?device=${encodeURIComponent(d.device)}&model=${encodeURIComponent(d.sku)}`);
         const stateData = await stateRes.json();
-        // v2 state: { payload: { capabilities: [{type, instance, state: {value}}] } }
         const caps = stateData.payload?.capabilities || [];
         return { ...d, model: d.sku, deviceName: d.deviceName || d.sku, capabilities: caps };
       } catch(e) {
         return { ...d, model: d.sku, deviceName: d.deviceName || d.sku, capabilities: [] };
       }
     }));
-
-    console.log('[govee] načteno:', goveeDevices.length, 'zařízení');
   } catch(e) {
-    console.error('[govee] chyba:', e);
     goveeDevices = [];
   }
 }
@@ -181,8 +158,7 @@ async function loadDevices() {
     renderDashboard();
     updateStats();
   } catch (err) {
-    console.error('Chyba načítání:', err);
-    document.getElementById('loading-state').innerHTML = '<p style="color:var(--red)">❌ Chyba — zkontroluj server (F12)</p>';
+    document.getElementById('loading-state').innerHTML = '<p style="color:var(--red)">❌ Chyba — zkontroluj server</p>';
   } finally {
     if (btn) btn.classList.remove('spinning');
   }
@@ -190,15 +166,12 @@ async function loadDevices() {
 
 // ---- STATS ----
 function updateStats() {
-  // Tuya
   const tuyaOnline = allDevices.filter(d => d.online).length;
   const tuyaActive = allDevices.filter(d => {
     const s = d.status || [];
     return s.some(st => (st.code==='switch_led'||st.code==='switch') && st.value===true);
   }).length;
-
-  // Govee
-  const goveeOnline = goveeDevices.length; // Govee jsou online pokud vrátí data
+  const goveeOnline = goveeDevices.length;
   const goveeActive = goveeDevices.filter(d => {
     const caps = d.capabilities || [];
     const power = caps.find(c => c.type==='devices.capabilities.on_off' && c.instance==='powerSwitch');
@@ -224,11 +197,10 @@ function updateStats() {
 }
 
 function parseHum(hum) {
-  // scale=1 → divide by 10, scale=0 → use directly
   return hum.value > 100 ? (hum.value/10).toFixed(0) : hum.value;
 }
 
-// ---- RENDER PAGES ----
+// ---- RENDER ----
 function renderDashboard() {
   document.getElementById('loading-state').style.display = 'none';
   const grid = document.getElementById('devices-grid');
@@ -248,37 +220,30 @@ function renderPlugs() {
     allDevices.filter(d => deviceType(d) === 'plug').forEach(d => loadPowerChart(d.id));
   }, 100);
 }
-
 function renderGrid(containerId, devices) {
   const grid = document.getElementById(containerId);
   if (!grid) return;
   grid.innerHTML = '';
-  if (devices.length === 0) {
-    grid.innerHTML = '<p style="color:var(--sub);padding:32px">Žádná zařízení</p>';
-    return;
-  }
+  if (!devices.length) { grid.innerHTML = '<p style="color:var(--text2);padding:32px">Žádná zařízení</p>'; return; }
   devices.forEach(device => grid.appendChild(buildCard(device)));
 }
 
 // ---- GOVEE CARD ----
 function buildGoveeCard(device) {
   const caps = device.capabilities || [];
-
-  // OpenAPI v2 state format
   const getCap = (type, instance) => caps.find(c => c.type === type && c.instance === instance);
   const powerCap  = getCap('devices.capabilities.on_off', 'powerSwitch');
   const brightCap = getCap('devices.capabilities.range', 'brightness');
   const colorCap  = getCap('devices.capabilities.color_setting', 'colorRgb');
 
   const isOn     = powerCap?.state?.value === 1;
-  const isOnline = device.deviceName !== undefined; // online pokud máme data
+  const isOnline = device.deviceName !== undefined;
   const bright   = brightCap?.state?.value ?? 100;
 
-  // RGB z číselné hodnoty
   const colorVal = colorCap?.state?.value;
   const col = colorVal ? { r:(colorVal>>16)&0xFF, g:(colorVal>>8)&0xFF, b:colorVal&0xFF } : null;
   const iconBg = col ? `rgb(${col.r},${col.g},${col.b})` : '';
-  const iconStyle = iconBg ? `background:${iconBg};opacity:0.85` : '';
+  const iconStyle = iconBg ? `background:${iconBg};opacity:0.9` : '';
 
   const card = document.createElement('div');
   card.className = `device-card govee-card${isOn?' is-on':''}${!isOnline?' is-offline':''}`;
@@ -313,7 +278,7 @@ function buildGoveeCard(device) {
   return card;
 }
 
-// ---- GOVEE TOGGLE ----
+// ---- GOVEE ACTIONS ----
 async function goveeToggle(device, model, el) {
   const currentlyOn = el.classList.contains('on');
   const turnOn = !currentlyOn;
@@ -322,8 +287,7 @@ async function goveeToggle(device, model, el) {
   if (card) card.classList.toggle('is-on', turnOn);
   try {
     await fetch('/api/govee/device/control', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ device, model, cmd: { name:'turn', value: turnOn?'on':'off' } })
     });
     setTimeout(loadDevices, 1000);
@@ -333,30 +297,26 @@ async function goveeToggle(device, model, el) {
   }
 }
 
-// ---- GOVEE BRIGHTNESS ----
 async function goveeSetBrightness(device, model, value) {
   await fetch('/api/govee/device/control', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ device, model, cmd: { name:'brightness', value: parseInt(value) } })
   });
 }
 
-// ---- GOVEE COLOR ----
 async function goveeSetColor(device, model, r, g, b, el) {
   document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
   if (el) el.classList.add('active');
+  updateLightPreview(r, g, b);
   await fetch('/api/govee/device/control', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ device, model, cmd: { name:'color', value: {r,g,b} } })
   });
 }
 
 async function goveeSetColorTemp(device, model, kelvin) {
   await fetch('/api/govee/device/control', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ device, model, cmd: { name:'colorTem', value: parseInt(kelvin) } })
   });
 }
@@ -364,69 +324,21 @@ async function goveeSetColorTemp(device, model, kelvin) {
 // ---- GOVEE MODAL ----
 function openGoveeModal(device, model, name) {
   document.getElementById('modal-title').textContent = name;
-
-  let swatches = '';
-  for (let i=0; i<PALETTE.length; i+=4) {
-    swatches += '<div class="palette-row">';
-    for (let j=i; j<Math.min(i+4,PALETTE.length); j++) {
-      const c = PALETTE[j];
-      // Převod HSV → RGB pro Govee
-      const [r,g,b] = hsvToRgb(c.h, c.s/1000, c.v/1000);
-      swatches += `<div class="color-swatch" style="background:${c.css}" title="${c.label}"
-        onclick="goveeSetColor('${device}','${model}',${r},${g},${b},this)">
-        <div class="swatch-label">${c.label}</div></div>`;
-    }
-    swatches += '</div>';
-  }
-
-  document.getElementById('modal-body').innerHTML = `
-    <div class="modal-section">
-      <div class="modal-label">Jas</div>
-      <div class="brightness-row">
-        <div class="brightness-label"><span>0%</span><span id="modal-govee-br">50%</span></div>
-        <input type="range" class="slider" min="1" max="100" value="50"
-          oninput="document.getElementById('modal-govee-br').textContent=this.value+'%'"
-          onchange="goveeSetBrightness('${device}','${model}',this.value)">
-      </div>
-    </div>
-    <div class="modal-section">
-      <div class="modal-label">Teplota světla (2000K – 9000K)</div>
-      <div class="brightness-row">
-        <div class="brightness-label"><span>🔥 Teplá</span><span>❄️ Studená</span></div>
-        <input type="range" class="slider" min="2000" max="9000" value="4000"
-          onchange="goveeSetColorTemp('${device}','${model}',this.value)">
-      </div>
-    </div>
-    <div class="modal-section">
-      <div class="modal-label">Paleta barev</div>
-      <div class="color-palette">${swatches}</div>
-    </div>
-    <div class="modal-section">
-      <div class="modal-label">Vlastní barva</div>
-      <div class="custom-color-row">
-        <input type="color" value="#ffffff" onchange="goveeColorFromHex('${device}','${model}',this.value)">
-        <span>Klikni a vyber libovolnou barvu</span>
-      </div>
-    </div>
-  `;
-
+  const body = document.getElementById('modal-body');
+  body.innerHTML = buildLightModalHtml({
+    brightnessOnChange: `goveeSetBrightness('${device}','${model}',this.value)`,
+    onColorTemp: `goveeSetColorTemp('${device}','${model}',kelvinFromSlider(this.value))`,
+    onHexColor: `goveeColorFromHex('${device}','${model}',this.value)`,
+    onPaletteColor: (c, r, g, b) => `goveeSetColor('${device}','${model}',${r},${g},${b},this)`,
+    onWheelColor: (r, g, b) => goveeSetColor(device, model, r, g, b, null),
+  });
+  initColorWheel(null, (r, g, b) => goveeSetColor(device, model, r, g, b, null));
   document.getElementById('modal-overlay').classList.add('open');
 }
 
 function goveeColorFromHex(device, model, hex) {
-  const r=parseInt(hex.slice(1,3),16);
-  const g=parseInt(hex.slice(3,5),16);
-  const b=parseInt(hex.slice(5,7),16);
+  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
   goveeSetColor(device, model, r, g, b, null);
-}
-
-function hsvToRgb(h, s, v) {
-  let r,g,b;
-  const i = Math.floor(h/60)%6;
-  const f = h/60-Math.floor(h/60);
-  const p=v*(1-s), q=v*(1-f*s), t=v*(1-(1-f)*s);
-  switch(i){case 0:r=v;g=t;b=p;break;case 1:r=q;g=v;b=p;break;case 2:r=p;g=v;b=t;break;case 3:r=p;g=q;b=v;break;case 4:r=t;g=p;b=v;break;case 5:r=v;g=p;b=q;break;}
-  return [Math.round(r*255), Math.round(g*255), Math.round(b*255)];
 }
 
 // ---- BUILD CARD ----
@@ -435,7 +347,6 @@ function buildCard(device) {
   const icon = deviceIcon(type, device.name);
   const status = device.status || [];
   const isOnline = device.online;
-
   const switchLed  = status.find(s => s.code === 'switch_led');
   const switchPlug = status.find(s => s.code === 'switch');
   const isOn = switchLed?.value || switchPlug?.value || false;
@@ -460,7 +371,7 @@ function buildCard(device) {
   }
   html += `</div>`;
 
-  // ---- SENSOR ----
+  // SENSOR
   if (type === 'sensor') {
     const temp  = status.find(s => s.code === 'va_temperature');
     const hum   = status.find(s => s.code === 'va_humidity');
@@ -480,7 +391,7 @@ function buildCard(device) {
     }
   }
 
-  // ---- LIGHT ----
+  // LIGHT
   if (type === 'light' && isOnline) {
     const bright = status.find(s => s.code === 'bright_value_v2');
     if (bright) {
@@ -496,11 +407,8 @@ function buildCard(device) {
     html += `<button class="detail-btn" onclick="openLightModal('${device.id}')">Nastavení světla →</button>`;
   }
 
-  // ---- PLUG ----
+  // PLUG
   if (type === 'plug') {
-    // cur_power scale=0 → value is in 0.1W → divide by 10
-    // cur_voltage scale=0 → value is in 0.1V → divide by 10
-    // cur_current scale=0 → value is in mA → divide by 1000
     const power   = status.find(s => s.code === 'cur_power');
     const voltage = status.find(s => s.code === 'cur_voltage');
     const current = status.find(s => s.code === 'cur_current');
@@ -516,25 +424,24 @@ function buildCard(device) {
     if (addEle) {
       html += `<div class="energy-total">⚡ Celkem: <strong>${(addEle.value/1000).toFixed(3)} kWh</strong></div>`;
     }
-    // Power gauge — max 3500W (běžná zásuvka)
     if (power) {
       const watt = power.value / 10;
       const maxW = 3500;
       const pct = Math.min(100, (watt / maxW) * 100);
-      const gaugeColor = pct > 80 ? '#f25f5c' : pct > 50 ? '#f5a623' : '#3ecf8e';
+      const gaugeColor = pct > 80 ? '#fc5c65' : pct > 50 ? '#f7b731' : '#2dce89';
       const r = 36, cx = 50, cy = 50;
       const circ = 2 * Math.PI * r;
       const dashOffset = circ * (1 - pct / 100);
       html += `
         <div class="power-gauge-wrap">
           <svg viewBox="0 0 100 100" class="power-gauge">
-            <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
-            <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${gaugeColor}" stroke-width="8"
+            <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="9"/>
+            <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${gaugeColor}" stroke-width="9"
               stroke-dasharray="${circ}" stroke-dashoffset="${dashOffset}"
               stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})"
               style="transition:stroke-dashoffset 0.6s ease"/>
             <text x="${cx}" y="${cy - 5}" text-anchor="middle" fill="${gaugeColor}" font-size="13" font-weight="600" font-family="DM Mono,monospace">${watt.toFixed(0)}</text>
-            <text x="${cx}" y="${cy + 10}" text-anchor="middle" fill="rgba(232,234,240,0.4)" font-size="7">WATT</text>
+            <text x="${cx}" y="${cy + 10}" text-anchor="middle" fill="rgba(238,242,255,0.3)" font-size="7">WATT</text>
           </svg>
           <div class="gauge-info">
             <div class="gauge-pct">${pct.toFixed(0)}% kapacity</div>
@@ -544,7 +451,7 @@ function buildCard(device) {
     }
   }
 
-  // ---- BUTTON / SCENE SWITCH ----
+  // BUTTON
   if (type === 'button') {
     const bat = status.find(s => s.code === 'battery_percentage');
     const modes = status.filter(s => s.code.includes('switch') || s.code.includes('mode'));
@@ -560,7 +467,6 @@ function buildCard(device) {
     }
   }
 
-  // ---- GATEWAY ----
   if (type === 'other' && device.name.toLowerCase().includes('gateway')) {
     html += `<div class="gateway-info">📡 Zigbee brána — ${isOnline ? 'aktivní' : 'offline'}</div>`;
   }
@@ -571,22 +477,13 @@ function buildCard(device) {
 
 // ---- TOGGLE ----
 async function toggleDevice(id, code, el) {
-  // Přečti aktuální stav z DOM — ne z parametru
   const currentlyOn = el.classList.contains('on');
   const newVal = !currentlyOn;
-
-  // Optimistic UI
   el.classList.toggle('on', newVal);
   const card = el.closest('.device-card');
   if (card) card.classList.toggle('is-on', newVal);
-
-  // Aktualizuj stav v allDevices aby ostatní sekce věděly o změně
   const device = allDevices.find(d => d.id === id);
-  if (device) {
-    const sw = device.status?.find(s => s.code === code);
-    if (sw) sw.value = newVal;
-  }
-
+  if (device) { const sw = device.status?.find(s => s.code === code); if (sw) sw.value = newVal; }
   try {
     const r = await fetch(`/api/device/${id}/control`, {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -594,16 +491,9 @@ async function toggleDevice(id, code, el) {
     });
     const d = await r.json();
     if (!d.success) {
-      // Vrátit zpět
       el.classList.toggle('on', currentlyOn);
       if (card) card.classList.toggle('is-on', currentlyOn);
-      if (device) {
-        const sw = device.status?.find(s => s.code === code);
-        if (sw) sw.value = currentlyOn;
-      }
-    } else {
-      setTimeout(loadDevices, 900);
-    }
+    } else { setTimeout(loadDevices, 900); }
   } catch(e) {
     el.classList.toggle('on', currentlyOn);
     if (card) card.classList.toggle('is-on', currentlyOn);
@@ -619,86 +509,203 @@ async function setBrightness(id, pct) {
   });
 }
 
-// ---- POWER CHART TOGGLE ----
-async function togglePowerChart(id) {
-  const wrap = document.getElementById(`pwchart-wrap-${id}`);
-  if (!wrap) return;
-  if (wrap.style.display === 'none') {
-    wrap.style.display = 'block';
-    await loadPowerChart(id);
-  } else {
-    wrap.style.display = 'none';
-  }
-}
+// ====================================================
+// ---- COLOR WHEEL ----
+// ====================================================
+let _wheelCallback = null;
+let _wheelCanvas = null;
+let _wheelCtx = null;
+let _wheelDragging = false;
+let _wheelCursorX = 110; // center
+let _wheelCursorY = 110;
 
-async function loadPowerChart(id) {
-  if (charts['pw_'+id]) { charts['pw_'+id].destroy(); delete charts['pw_'+id]; }
-  const canvas = document.getElementById(`pwchart-${id}`);
+function initColorWheel(initialColor, onColorChange) {
+  _wheelCallback = onColorChange;
+  const canvas = document.getElementById('color-wheel-canvas');
   if (!canvas) return;
+  _wheelCanvas = canvas;
+  _wheelCtx = canvas.getContext('2d');
 
-  try {
-    const now = Date.now();
-    const from = now - 24*60*60*1000;
-    const res = await fetch(`/api/device/${id}/power-history?start_time=${from}&end_time=${now}&size=50`);
-    const data = await res.json();
+  const size = canvas.offsetWidth || 220;
+  canvas.width = size * window.devicePixelRatio;
+  canvas.height = size * window.devicePixelRatio;
+  _wheelCtx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
-    console.log('[power chart]', id, JSON.stringify(data).slice(0,200));
+  drawColorWheel(size);
 
-    const logs = (data.result?.logs || []).reverse();
-    if (!logs.length) {
-      canvas.parentElement.innerHTML += '<p class="no-data">Žádná data o spotřebě</p>';
-      return;
-    }
+  _wheelCursorX = size / 2;
+  _wheelCursorY = size / 2;
+  updateWheelCursor(size / 2, size / 2);
 
-    const labels = logs.map(l => {
-      const d = new Date(parseInt(l.event_time));
-      return d.toLocaleTimeString('cs-CZ', {hour:'2-digit', minute:'2-digit'});
-    });
-    const values = logs.map(l => (parseInt(l.value)/10).toFixed(1));
+  const container = document.getElementById('color-wheel-container');
+  if (!container) return;
 
-    const ctx = canvas.getContext('2d');
-    charts['pw_'+id] = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Výkon (W)',
-          data: values,
-          borderColor: '#f5a623',
-          backgroundColor: 'rgba(245,166,35,0.08)',
-          tension: 0.4, fill: true, pointRadius: 0, borderWidth: 2,
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        interaction: { intersect:false, mode:'index' },
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { ticks: { color:'rgba(232,234,240,0.35)', maxTicksLimit:6, font:{size:10} }, grid: { color:'rgba(255,255,255,0.04)' } },
-          y: { ticks: { color:'#f5a623', font:{size:10}, callback: v => v+'W' }, grid: { color:'rgba(255,255,255,0.04)' } },
-        }
-      }
-    });
-  } catch(e) {
-    console.error('[power chart error]', e);
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches ? e.touches[0] : e;
+    return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
   }
+
+  function handleWheel(e) {
+    e.preventDefault();
+    const { x, y } = getPos(e);
+    const size = canvas.offsetWidth;
+    const cx = size / 2, cy = size / 2;
+    const dx = x - cx, dy = y - cy;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist <= size / 2) {
+      _wheelCursorX = x; _wheelCursorY = y;
+      updateWheelCursor(x, y);
+      const [r, g, b] = getColorAtPos(x, y, size);
+      if (_wheelCallback) _wheelCallback(r, g, b);
+      updateLightPreview(r, g, b);
+    }
+  }
+
+  canvas.addEventListener('mousedown', e => { _wheelDragging = true; handleWheel(e); });
+  window.addEventListener('mousemove', e => { if (_wheelDragging) handleWheel(e); });
+  window.addEventListener('mouseup', () => { _wheelDragging = false; });
+  canvas.addEventListener('touchstart', e => { handleWheel(e); }, { passive: false });
+  canvas.addEventListener('touchmove', e => { handleWheel(e); }, { passive: false });
 }
 
-// ---- COLOR PALETTE ----
-const PALETTE = [
-  { label:'Teplá bílá',   h:30,  s:80,   v:1000, css:'#ffdb99' },
-  { label:'Neutrální',    h:40,  s:40,   v:1000, css:'#fff5e0' },
-  { label:'Studená bílá', h:210, s:30,   v:1000, css:'#ddeeff' },
-  { label:'Bílá',         h:0,   s:0,    v:1000, css:'#ffffff' },
-  { label:'Červená',      h:0,   s:1000, v:900,  css:'#ff4040' },
-  { label:'Oranžová',     h:25,  s:1000, v:1000, css:'#ff8c00' },
-  { label:'Žlutá',        h:55,  s:1000, v:1000, css:'#ffd700' },
-  { label:'Zelená',       h:120, s:900,  v:800,  css:'#3cb371' },
-  { label:'Tyrkysová',    h:175, s:900,  v:800,  css:'#20b2aa' },
-  { label:'Modrá',        h:220, s:1000, v:1000, css:'#4169e1' },
-  { label:'Fialová',      h:275, s:900,  v:900,  css:'#8a2be2' },
-  { label:'Růžová',       h:320, s:800,  v:1000, css:'#ff69b4' },
-];
+function drawColorWheel(size) {
+  const ctx = _wheelCtx;
+  const cx = size / 2, cy = size / 2, r = size / 2;
+
+  // Draw hue ring
+  for (let angle = 0; angle < 360; angle++) {
+    const startAngle = (angle - 1) * Math.PI / 180;
+    const endAngle = (angle + 1) * Math.PI / 180;
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    grad.addColorStop(0, 'white');
+    grad.addColorStop(0.5, `hsl(${angle}, 100%, 50%)`);
+    grad.addColorStop(1, `hsl(${angle}, 100%, 20%)`);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }
+
+  // Darken outer edges slightly
+  const darkGrad = ctx.createRadialGradient(cx, cy, r * 0.85, cx, cy, r);
+  darkGrad.addColorStop(0, 'transparent');
+  darkGrad.addColorStop(1, 'rgba(0,0,0,0.25)');
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+  ctx.fillStyle = darkGrad;
+  ctx.fill();
+}
+
+function getColorAtPos(x, y, size) {
+  try {
+    const scaleX = _wheelCanvas.width / _wheelCanvas.offsetWidth;
+    const scaleY = _wheelCanvas.height / _wheelCanvas.offsetHeight;
+    const px = Math.round(x * scaleX);
+    const py = Math.round(y * scaleY);
+    const pixel = _wheelCtx.getImageData(px, py, 1, 1).data;
+    return [pixel[0], pixel[1], pixel[2]];
+  } catch(e) { return [255, 255, 255]; }
+}
+
+function updateWheelCursor(x, y) {
+  const cursor = document.getElementById('color-wheel-cursor');
+  if (!cursor) return;
+  cursor.style.left = x + 'px';
+  cursor.style.top = y + 'px';
+}
+
+function updateLightPreview(r, g, b) {
+  const preview = document.getElementById('light-preview');
+  if (!preview) return;
+  const hex = rgbToHex(r, g, b);
+  const brightness = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+  preview.style.background = `radial-gradient(ellipse at center, ${hex} 0%, rgba(${r},${g},${b},0.3) 60%, transparent 100%)`;
+  preview.style.boxShadow = `0 0 40px rgba(${r},${g},${b},0.5)`;
+  document.documentElement.style.setProperty('--wheel-color', hex);
+}
+
+function rgbToHex(r, g, b) {
+  return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+}
+
+function hsvToRgb(h, s, v) {
+  let r,g,b;
+  const i = Math.floor(h/60)%6;
+  const f = h/60-Math.floor(h/60);
+  const p=v*(1-s), q=v*(1-f*s), t=v*(1-(1-f)*s);
+  switch(i){case 0:r=v;g=t;b=p;break;case 1:r=q;g=v;b=p;break;case 2:r=p;g=v;b=t;break;case 3:r=p;g=q;b=v;break;case 4:r=t;g=p;b=v;break;case 5:r=v;g=p;b=q;break;}
+  return [Math.round(r*255), Math.round(g*255), Math.round(b*255)];
+}
+
+function kelvinFromSlider(val) {
+  // val 0-100 → 2000K-9000K
+  return Math.round(2000 + (val / 100) * 7000);
+}
+
+// ====================================================
+// ---- LIGHT MODAL SHARED HTML ----
+// ====================================================
+function buildLightModalHtml(opts) {
+  // Build palette swatches
+  let swatches = '';
+  PALETTE.forEach((c, i) => {
+    const [r,g,b] = hsvToRgb(c.h, c.s/1000, c.v/1000);
+    swatches += `<div class="color-swatch" style="background:${c.css}" title="${c.label}"
+      onclick="${opts.onPaletteColor(c, r, g, b)}">
+      <div class="swatch-label">${c.label}</div></div>`;
+  });
+
+  return `
+    <div id="light-preview" class="light-preview">
+      <span class="light-preview-icon">💡</span>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-label">Jas</div>
+      <div class="brightness-row">
+        <div class="brightness-label"><span>0%</span><span id="modal-br-val">50%</span></div>
+        <input type="range" class="slider brightness-slider" min="1" max="100" value="50"
+          oninput="document.getElementById('modal-br-val').textContent=this.value+'%'"
+          onchange="${opts.brightnessOnChange}">
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-label">Teplota světla</div>
+      <div class="brightness-row">
+        <div class="brightness-label"><span>🔥 Teplá (2000K)</span><span>❄️ Studená (9000K)</span></div>
+        <input type="range" class="slider temp-slider" min="0" max="100" value="28"
+          onchange="${opts.onColorTemp}">
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-label">Color Wheel</div>
+      <div class="color-wheel-wrap">
+        <div class="color-wheel-container" id="color-wheel-container">
+          <canvas class="color-wheel-canvas" id="color-wheel-canvas"></canvas>
+          <div class="color-wheel-cursor" id="color-wheel-cursor"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-label">Paleta barev</div>
+      <div class="color-palette">${swatches}</div>
+    </div>
+
+    <div class="modal-section">
+      <div class="modal-label">Vlastní barva</div>
+      <div class="custom-color-row">
+        <input type="color" value="#ffffff" onchange="${opts.onHexColor}">
+        <span>Klikni a vyber libovolnou barvu</span>
+      </div>
+    </div>
+  `;
+}
 
 // ---- LIGHT MODAL ----
 function openLightModal(id) {
@@ -709,63 +716,30 @@ function openLightModal(id) {
   const st = device.status || [];
   const bright = st.find(s => s.code==='bright_value_v2');
   const pct = bright ? Math.round((bright.value/1000)*100) : 50;
-  const tempVal = st.find(s => s.code==='temp_value_v2');
-  const tempPct = tempVal ? Math.round((tempVal.value/1000)*100) : 50;
 
-  let swatches = '';
-  for (let i=0; i<PALETTE.length; i+=4) {
-    swatches += '<div class="palette-row">';
-    for (let j=i; j<Math.min(i+4,PALETTE.length); j++) {
-      const c = PALETTE[j];
-      swatches += `<div class="color-swatch" style="background:${c.css}" title="${c.label}" onclick="setColor('${id}',${c.h},${c.s},${c.v},this)"><div class="swatch-label">${c.label}</div></div>`;
-    }
-    swatches += '</div>';
+  document.getElementById('modal-body').innerHTML = buildLightModalHtml({
+    brightnessOnChange: `setBrightness('${id}',this.value)`,
+    onColorTemp: `setColorTempFromSlider('${id}',this.value)`,
+    onHexColor: `setColorFromHex('${id}',this.value)`,
+    onPaletteColor: (c, r, g, b) => `setColor('${id}',${c.h},${c.s},${c.v},this)`,
+    onWheelColor: (r, g, b) => setColorFromRgb(id, r, g, b),
+  });
+
+  // Set initial brightness
+  const brInput = document.querySelector('#modal-body .slider.brightness-slider');
+  if (brInput) {
+    brInput.value = pct;
+    document.getElementById('modal-br-val').textContent = pct + '%';
   }
 
-  document.getElementById('modal-body').innerHTML = `
-    <div class="modal-section">
-      <div class="modal-label">Režim</div>
-      <div class="mode-tabs">
-        <button class="mode-tab active" onclick="setMode('${id}','white',this)">⬜ Bílá</button>
-        <button class="mode-tab" onclick="setMode('${id}','colour',this)">🎨 Barva</button>
-        <button class="mode-tab" onclick="setMode('${id}','scene',this)">✨ Scéna</button>
-      </div>
-    </div>
-    <div class="modal-section">
-      <div class="modal-label">Jas</div>
-      <div class="brightness-row">
-        <div class="brightness-label"><span>0%</span><span id="modal-br">${pct}%</span></div>
-        <input type="range" class="slider" min="1" max="100" value="${pct}"
-          oninput="document.getElementById('modal-br').textContent=this.value+'%'"
-          onchange="setBrightness('${id}',this.value)">
-      </div>
-    </div>
-    <div class="modal-section">
-      <div class="modal-label">Teplota světla</div>
-      <div class="brightness-row">
-        <div class="brightness-label"><span>❄️ Studená</span><span>🔥 Teplá</span></div>
-        <input type="range" class="slider" min="0" max="100" value="${100-tempPct}"
-          onchange="setColorTemp('${id}',100-this.value)">
-      </div>
-    </div>
-    <div class="modal-section">
-      <div class="modal-label">Paleta barev</div>
-      <div class="color-palette">${swatches}</div>
-    </div>
-    <div class="modal-section">
-      <div class="modal-label">Vlastní barva</div>
-      <div class="custom-color-row">
-        <input type="color" value="#ffffff" onchange="setColorFromHex('${id}',this.value)">
-        <span>Klikni a vyber libovolnou barvu</span>
-      </div>
-    </div>
-  `;
-
+  initColorWheel(null, (r, g, b) => setColorFromRgb(id, r, g, b));
   document.getElementById('modal-overlay').classList.add('open');
 }
 
 function closeModal() {
   document.getElementById('modal-overlay').classList.remove('open');
+  // Cleanup wheel events by replacing canvas
+  _wheelCanvas = null; _wheelCtx = null; _wheelCallback = null;
 }
 
 async function setMode(id, mode, btn) {
@@ -780,6 +754,8 @@ async function setMode(id, mode, btn) {
 async function setColor(id, h, s, v, el) {
   document.querySelectorAll('.color-swatch').forEach(sw => sw.classList.remove('active'));
   if (el) el.classList.add('active');
+  const [r,g,b] = hsvToRgb(h, s/1000, v/1000);
+  updateLightPreview(r, g, b);
   await fetch(`/api/device/${id}/control`, {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ commands:[
@@ -787,6 +763,21 @@ async function setColor(id, h, s, v, el) {
       {code:'colour_data_v2', value:{h,s,v}}
     ]})
   });
+}
+
+async function setColorFromRgb(id, r, g, b) {
+  // Convert RGB → HSV for Tuya
+  const rn=r/255, gn=g/255, bn=b/255;
+  const max=Math.max(rn,gn,bn), min=Math.min(rn,gn,bn), d=max-min;
+  let h=0, s=max===0?0:d/max, v=max;
+  if(max!==min){
+    switch(max){
+      case rn: h=((gn-bn)/d+(gn<bn?6:0))/6; break;
+      case gn: h=((bn-rn)/d+2)/6; break;
+      case bn: h=((rn-gn)/d+4)/6; break;
+    }
+  }
+  setColor(id, Math.round(h*360), Math.round(s*1000), Math.round(v*1000), null);
 }
 
 async function setColorTemp(id, pct) {
@@ -800,6 +791,16 @@ async function setColorTemp(id, pct) {
   });
 }
 
+function setColorTempFromSlider(id, val) {
+  setColorTemp(id, val);
+  // Update preview with warm/cool color
+  const t = val / 100;
+  const r = Math.round(255 * (1 - t * 0.3));
+  const g = Math.round(220 + t * 35);
+  const b = Math.round(180 + t * 75);
+  updateLightPreview(r, g, b);
+}
+
 function setColorFromHex(id, hex) {
   const r=parseInt(hex.slice(1,3),16)/255, g=parseInt(hex.slice(3,5),16)/255, b=parseInt(hex.slice(5,7),16)/255;
   const max=Math.max(r,g,b), min=Math.min(r,g,b), d=max-min;
@@ -811,34 +812,91 @@ function setColorFromHex(id, hex) {
       case b: h=((r-g)/d+4)/6; break;
     }
   }
+  const ri=parseInt(hex.slice(1,3),16), gi=parseInt(hex.slice(3,5),16), bi=parseInt(hex.slice(5,7),16);
+  updateLightPreview(ri, gi, bi);
   setColor(id, Math.round(h*360), Math.round(s*1000), Math.round(v*1000), null);
 }
 
-// ---- SENSORS PAGE WITH CHARTS ----
+// ---- COLOR PALETTE ----
+const PALETTE = [
+  { label:'Teplá',    h:30,  s:80,   v:1000, css:'#ffdb99' },
+  { label:'Neutrální',h:40,  s:40,   v:1000, css:'#fff5e0' },
+  { label:'Studená',  h:210, s:30,   v:1000, css:'#ddeeff' },
+  { label:'Bílá',     h:0,   s:0,    v:1000, css:'#ffffff' },
+  { label:'Červená',  h:0,   s:1000, v:900,  css:'#ff4040' },
+  { label:'Oranžová', h:25,  s:1000, v:1000, css:'#ff8c00' },
+  { label:'Žlutá',    h:55,  s:1000, v:1000, css:'#ffd700' },
+  { label:'Zelená',   h:120, s:900,  v:800,  css:'#3cb371' },
+  { label:'Tyrkys',   h:175, s:900,  v:800,  css:'#20b2aa' },
+  { label:'Modrá',    h:220, s:1000, v:1000, css:'#4169e1' },
+  { label:'Fialová',  h:275, s:900,  v:900,  css:'#8a2be2' },
+  { label:'Růžová',   h:320, s:800,  v:1000, css:'#ff69b4' },
+];
 
-// Globální úložiště dat senzorů pro souhrnné grafy
-const sensorData = {}; // { deviceId: { tempLogs, humLogs, tempData, humData, labels } }
+// ====================================================
+// ---- POWER CHARTS ----
+// ====================================================
+async function loadPowerChart(id) {
+  if (charts['pw_'+id]) { charts['pw_'+id].destroy(); delete charts['pw_'+id]; }
+  const canvas = document.getElementById(`pwchart-${id}`);
+  if (!canvas) return;
+  try {
+    const now = Date.now();
+    const from = now - 24*60*60*1000;
+    const res = await fetch(`/api/device/${id}/power-history?start_time=${from}&end_time=${now}&size=50`);
+    const data = await res.json();
+    const logs = (data.result?.logs || []).reverse();
+    if (!logs.length) { canvas.parentElement.innerHTML += '<p class="no-data">Žádná data o spotřebě</p>'; return; }
+
+    const labels = logs.map(l => {
+      const d = new Date(parseInt(l.event_time));
+      return d.toLocaleTimeString('cs-CZ', {hour:'2-digit', minute:'2-digit'});
+    });
+    const values = logs.map(l => (parseInt(l.value)/10).toFixed(1));
+    const ctx = canvas.getContext('2d');
+    charts['pw_'+id] = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Výkon (W)', data: values,
+          borderColor: '#f7b731',
+          backgroundColor: 'rgba(247,183,49,0.07)',
+          tension: 0.4, fill: true, pointRadius: 0, borderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { intersect:false, mode:'index' },
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color:'rgba(238,242,255,0.3)', maxTicksLimit:6, font:{size:10} }, grid: { color:'rgba(255,255,255,0.03)' } },
+          y: { ticks: { color:'#f7b731', font:{size:10}, callback: v => v+'W' }, grid: { color:'rgba(255,255,255,0.03)' } },
+        }
+      }
+    });
+  } catch(e) {}
+}
+
+// ====================================================
+// ---- SENSORS ----
+// ====================================================
+const sensorData = {};
 
 async function renderSensors() {
   const grid = document.getElementById('sensors-grid');
   if (!grid) return;
   grid.innerHTML = '';
-
-  // Zruš staré grafy
   Object.keys(charts).forEach(k => {
     if (!k.startsWith('pw_')) { try { charts[k].destroy(); } catch(e){} delete charts[k]; }
   });
 
   const sensors = allDevices.filter(d => deviceType(d) === 'sensor');
-  if (!sensors.length) {
-    grid.innerHTML = '<p style="color:var(--sub);padding:32px">Žádné senzory</p>';
-    return;
-  }
+  if (!sensors.length) { grid.innerHTML = '<p style="color:var(--text2);padding:32px">Žádné senzory</p>'; return; }
 
   const now = Date.now();
   const from = sensorRange === '7d' ? now - 7*24*60*60*1000 : now - 24*60*60*1000;
 
-  // ---- Jednotlivé karty senzorů ----
   for (const device of sensors) {
     const st = device.status || [];
     const temp  = st.find(s => s.code === 'va_temperature');
@@ -891,7 +949,6 @@ async function renderSensors() {
     grid.appendChild(card);
   }
 
-  // ---- Souhrnné grafy (full width) ----
   const summaryEl = document.createElement('div');
   summaryEl.className = 'sensor-summary';
   summaryEl.innerHTML = `
@@ -920,39 +977,24 @@ async function renderSensors() {
   `;
   grid.appendChild(summaryEl);
 
-  // Načti data pro všechny senzory pak vykresli
   await Promise.all(sensors.map(d => loadSensorData(d.id, from, now)));
   drawComparisons(sensors);
   renderCompareStats(sensors);
 }
 
 async function fetchAllLogs(deviceId, codes, from, to, maxPages = 5) {
-  let allLogs = [];
-  let lastRowKey = '';
-
+  let allLogs = [], lastRowKey = '';
   for (let page = 0; page < maxPages; page++) {
-    // Sestavíme URL parametry — last_row_key přidáme jen pokud existuje
-    const params = new URLSearchParams({
-      codes,
-      start_time: from,
-      end_time: to,
-      size: 100,
-    });
+    const params = new URLSearchParams({ codes, start_time: from, end_time: to, size: 100 });
     if (lastRowKey) params.set('last_row_key', lastRowKey);
-
     const res = await fetch(`/api/device/${deviceId}/history?${params.toString()}`).then(r => r.json());
     const logs = res.result?.logs || [];
-
     if (!logs.length) break;
     allLogs = allLogs.concat(logs);
-
     if (!res.result?.has_more || !res.result?.last_row_key) break;
-
-    // Ochrana proti zacyklení — pokud dostaneme stejný klíč, zastav
     if (res.result.last_row_key === lastRowKey) break;
     lastRowKey = res.result.last_row_key;
   }
-
   return allLogs.reverse();
 }
 
@@ -962,74 +1004,47 @@ async function loadSensorData(deviceId, from, to) {
       fetchAllLogs(deviceId, 'va_temperature', from, to),
       fetchAllLogs(deviceId, 'va_humidity', from, to),
     ]);
-
     const tempData = tempLogs.map(l => (parseInt(l.value)/10));
     const humData  = humLogs.map(l  => { const v=parseInt(l.value); return v>100?v/10:v; });
-
     const timeLabel = (ts) => {
       const d = new Date(parseInt(ts));
       return sensorRange === '7d'
         ? d.toLocaleDateString('cs-CZ', {weekday:'short', day:'numeric', month:'numeric', hour:'2-digit', minute:'2-digit'})
         : d.toLocaleTimeString('cs-CZ', {hour:'2-digit', minute:'2-digit'});
     };
-
     const tempLabels = tempLogs.map(l => timeLabel(l.event_time));
     const humLabels  = humLogs.map(l  => timeLabel(l.event_time));
-
     sensorData[deviceId] = { tempLogs, humLogs, tempData, humData, tempLabels, humLabels };
-
-    drawSingleChart(`chart-temp-${deviceId}`, `chart-temp-wrap-${deviceId}`, tempLabels, tempData, 'Teplota (°C)', '#4f8ef7', 'rgba(79,142,247,0.1)', '°');
-    drawSingleChart(`chart-hum-${deviceId}`,  `chart-hum-wrap-${deviceId}`,  humLabels,  humData,  'Vlhkost (%)', '#3ecf8e', 'rgba(62,207,142,0.08)', '%');
-
-  } catch(e) {
-    console.error('[sensor data error]', deviceId, e);
-  }
+    drawSingleChart(`chart-temp-${deviceId}`, `chart-temp-wrap-${deviceId}`, tempLabels, tempData, 'Teplota (°C)', '#5b8fff', 'rgba(91,143,255,0.08)', '°');
+    drawSingleChart(`chart-hum-${deviceId}`,  `chart-hum-wrap-${deviceId}`,  humLabels,  humData,  'Vlhkost (%)', '#2dce89', 'rgba(45,206,137,0.07)', '%');
+  } catch(e) {}
 }
 
 function drawSingleChart(canvasId, wrapId, labels, data, label, color, bgColor, unit) {
   const wrap   = document.getElementById(wrapId);
   const canvas = document.getElementById(canvasId);
   if (!canvas || !wrap) return;
-
   const loading = wrap.querySelector('.chart-loading');
   if (loading) loading.style.display = 'none';
-
-  if (!data.length) {
-    wrap.innerHTML = '<p class="no-data">Žádná data</p>';
-    return;
-  }
-
+  if (!data.length) { wrap.innerHTML = '<p class="no-data">Žádná data</p>'; return; }
   canvas.style.display = 'block';
   if (charts[canvasId]) { try { charts[canvasId].destroy(); } catch(e){} }
-
   const minVal = Math.min(...data);
   const maxVal = Math.max(...data);
   const padding = (maxVal - minVal) * 0.15 || 1;
-
   charts[canvasId] = new Chart(canvas.getContext('2d'), {
     type: 'line',
     data: {
       labels,
-      datasets: [{
-        label,
-        data,
-        borderColor: color,
-        backgroundColor: bgColor,
-        tension: 0.4, fill: true, pointRadius: 0, borderWidth: 2,
-      }]
+      datasets: [{ label, data, borderColor: color, backgroundColor: bgColor, tension: 0.4, fill: true, pointRadius: 0, borderWidth: 2 }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       interaction: { intersect:false, mode:'index' },
       plugins: { legend: { display: false } },
       scales: {
-        x: { ticks: { color:'rgba(232,234,240,0.35)', maxTicksLimit:6, font:{size:10} }, grid: { color:'rgba(255,255,255,0.04)' } },
-        y: {
-          min: minVal - padding,
-          max: maxVal + padding,
-          ticks: { color, font:{size:10}, callback: v => v.toFixed(1)+unit },
-          grid: { color:'rgba(255,255,255,0.04)' }
-        }
+        x: { ticks: { color:'rgba(238,242,255,0.3)', maxTicksLimit:6, font:{size:10} }, grid: { color:'rgba(255,255,255,0.03)' } },
+        y: { min: minVal - padding, max: maxVal + padding, ticks: { color, font:{size:10}, callback: v => v.toFixed(1)+unit }, grid: { color:'rgba(255,255,255,0.03)' } }
       }
     }
   });
@@ -1039,10 +1054,8 @@ function toggleAverage(title) {
   const chart = charts['compare_'+title];
   const btn = document.getElementById('avg-btn-'+title);
   if (!chart || !btn) return;
-
   const lastIdx = chart.data.datasets.length - 1;
   const meta = chart.getDatasetMeta(lastIdx);
-  // meta.hidden je true (skrytý) nebo null (viditelný)
   const currentlyHidden = meta.hidden === true;
   meta.hidden = !currentlyHidden;
   btn.classList.toggle('active', !meta.hidden);
@@ -1050,21 +1063,17 @@ function toggleAverage(title) {
 }
 
 function drawComparisons(sensors) {
-  const COLORS = ['#4f8ef7','#f5a623','#3ecf8e','#f25f5c'];
-  const AVG_COLOR = 'rgba(255,255,255,0.65)';
-
+  const COLORS = ['#5b8fff','#f7b731','#2dce89','#fc5c65'];
+  const AVG_COLOR = 'rgba(255,255,255,0.55)';
   [
     { canvasId:'canvas-compare-temp', wrapId:'chart-compare-temp', key:'tempData', timeKey:'tempLogs', unit:'°', title:'temp', avgLabel:'Průměr' },
     { canvasId:'canvas-compare-hum',  wrapId:'chart-compare-hum',  key:'humData',  timeKey:'humLogs',  unit:'%', title:'hum',  avgLabel:'Průměr' },
   ].forEach(({ canvasId, wrapId, key, timeKey, unit, title, avgLabel }) => {
-    const wrap   = document.getElementById(wrapId);
+    const wrap = document.getElementById(wrapId);
     const canvas = document.getElementById(canvasId);
     if (!canvas || !wrap) return;
-
     const loading = wrap.querySelector('.chart-loading');
     if (loading) loading.style.display = 'none';
-
-    // Použij string labels — nejdelší série jako základ
     const longestDevice = sensors.reduce((a,b) => {
       const da = sensorData[a.id]; const db = sensorData[b.id];
       return (da?.[timeKey]?.length||0) >= (db?.[timeKey]?.length||0) ? a : b;
@@ -1076,8 +1085,6 @@ function drawComparisons(sensors) {
         ? d.toLocaleDateString('cs-CZ', {day:'numeric', month:'numeric', hour:'2-digit', minute:'2-digit'})
         : d.toLocaleTimeString('cs-CZ', {hour:'2-digit', minute:'2-digit'});
     });
-
-    // Interpoluj kratší série na délku nejdelší
     const maxLen = labels.length;
     const sensorDatasets = sensors.map((device, i) => {
       const d = sensorData[device.id];
@@ -1087,41 +1094,21 @@ function drawComparisons(sensors) {
         const srcIdx = Math.round((idx / (maxLen - 1)) * (src.length - 1));
         return src[srcIdx] ?? null;
       });
-      return {
-        label: device.name,
-        data: interpolated,
-        borderColor: COLORS[i % COLORS.length],
-        backgroundColor: 'transparent',
-        tension: 0.4, fill: false, pointRadius: 0, borderWidth: 2,
-      };
+      return { label: device.name, data: interpolated, borderColor: COLORS[i % COLORS.length], backgroundColor: 'transparent', tension: 0.4, fill: false, pointRadius: 0, borderWidth: 2 };
     }).filter(Boolean);
-
     if (!sensorDatasets.length) { wrap.innerHTML = '<p class="no-data">Žádná data</p>'; return; }
-
-    // Průměr
     const avgData = Array.from({length: maxLen}, (_, i) => {
       const vals = sensorDatasets.map(ds => ds.data[i]).filter(v => v !== null && v !== undefined);
       return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
     });
-
-    const avgDataset = {
-      label: avgLabel,
-      data: avgData,
-      borderColor: AVG_COLOR,
-      backgroundColor: 'transparent',
-      borderDash: [6, 3],
-      tension: 0.4, fill: false, pointRadius: 0, borderWidth: 1.5,
-    };
-
+    const avgDataset = { label: avgLabel, data: avgData, borderColor: AVG_COLOR, backgroundColor: 'transparent', borderDash: [6, 3], tension: 0.4, fill: false, pointRadius: 0, borderWidth: 1.5 };
     const datasets = [...sensorDatasets, avgDataset];
     canvas.style.display = 'block';
     if (charts['compare_'+title]) { try { charts['compare_'+title].destroy(); } catch(e){} }
-
     const allVals = sensorDatasets.flatMap(ds => ds.data).filter(v => v !== null);
     const minVal = Math.min(...allVals);
     const maxVal = Math.max(...allVals);
     const padding = (maxVal - minVal) * 0.15 || 1;
-
     charts['compare_'+title] = new Chart(canvas.getContext('2d'), {
       type: 'line',
       data: { labels, datasets },
@@ -1130,28 +1117,13 @@ function drawComparisons(sensors) {
         interaction: { intersect:false, mode:'index' },
         plugins: {
           legend: {
-            labels: {
-              font:{size:11},
-              padding:16,
+            labels: { font:{size:11}, padding:16, color:'rgba(238,242,255,0.6)',
               generateLabels(chart) {
                 return chart.data.datasets.map((ds, i) => {
                   const meta = chart.getDatasetMeta(i);
                   const isHidden = meta.hidden === true;
                   const isAvg = ds.label === avgLabel;
-                  return {
-                    text: ds.label,
-                    fillStyle: 'transparent',
-                    strokeStyle: ds.borderColor,
-                    lineWidth: isAvg ? 1.5 : 2,
-                    lineDash: isAvg ? [6,3] : [],
-                    hidden: false, // nikdy nepřeškrtávat
-                    datasetIndex: i,
-                    pointStyle: 'line',
-                    // Ztmavnout když je skrytý
-                    fontColor: isHidden
-                      ? 'rgba(232,234,240,0.2)'
-                      : isAvg ? 'rgba(255,255,255,0.5)' : 'rgba(232,234,240,0.7)',
-                  };
+                  return { text: ds.label, fillStyle: 'transparent', strokeStyle: ds.borderColor, lineWidth: isAvg ? 1.5 : 2, lineDash: isAvg ? [6,3] : [], hidden: false, datasetIndex: i, pointStyle: 'line', fontColor: isHidden ? 'rgba(238,242,255,0.2)' : isAvg ? 'rgba(255,255,255,0.45)' : 'rgba(238,242,255,0.65)' };
                 });
               }
             },
@@ -1168,25 +1140,14 @@ function drawComparisons(sensors) {
           }
         },
         scales: {
-          x: {
-            ticks: { color:'rgba(232,234,240,0.35)', maxTicksLimit:8, font:{size:10}, maxRotation:0 },
-            grid: { color:'rgba(255,255,255,0.04)' }
-          },
-          y: {
-            min: minVal - padding,
-            max: maxVal + padding,
-            ticks: { color:'rgba(232,234,240,0.5)', font:{size:10}, callback: v => v.toFixed(1)+unit },
-            grid: { color:'rgba(255,255,255,0.04)' }
-          }
+          x: { ticks: { color:'rgba(238,242,255,0.3)', maxTicksLimit:8, font:{size:10}, maxRotation:0 }, grid: { color:'rgba(255,255,255,0.03)' } },
+          y: { min: minVal - padding, max: maxVal + padding, ticks: { color:'rgba(238,242,255,0.45)', font:{size:10}, callback: v => v.toFixed(1)+unit }, grid: { color:'rgba(255,255,255,0.03)' } }
         }
       }
     });
-
-    // Skryj průměr hned po vytvoření přes meta (jediná správná cesta)
     const newChart = charts['compare_'+title];
     if (newChart) {
-      const lastIdx = newChart.data.datasets.length - 1;
-      newChart.getDatasetMeta(lastIdx).hidden = true;
+      newChart.getDatasetMeta(newChart.data.datasets.length - 1).hidden = true;
       newChart.update('none');
     }
   });
@@ -1196,10 +1157,10 @@ function renderCompareStats(sensors) {
   [
     { statsId: 'compare-stats-temp', key: 'tempData', unit: '°C', label: 'Teplota' },
     { statsId: 'compare-stats-hum',  key: 'humData',  unit: '%',  label: 'Vlhkost' },
-  ].forEach(({ statsId, key, unit, label }) => {
+  ].forEach(({ statsId, key, unit }) => {
     const el = document.getElementById(statsId);
     if (!el) return;
-
+    const COLORS = ['#5b8fff','#f7b731','#2dce89','#fc5c65'];
     const rows = sensors.map((device, i) => {
       const d = sensorData[device.id];
       if (!d || !d[key].length) return '';
@@ -1207,23 +1168,17 @@ function renderCompareStats(sensors) {
       const min = Math.min(...vals).toFixed(1);
       const max = Math.max(...vals).toFixed(1);
       const avg = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
-      const COLORS = ['#4f8ef7','#f5a623','#3ecf8e','#f25f5c'];
       const color = COLORS[i % COLORS.length];
-      return `
-        <div class="compare-stat-row">
-          <div class="compare-stat-name">
-            <span class="compare-dot" style="background:${color}"></span>
-            ${device.name}
-          </div>
-          <div class="compare-stat-vals">
-            <div class="compare-stat-item"><span class="csi-label">Min</span><span class="csi-val" style="color:${color}">${min}${unit}</span></div>
-            <div class="compare-stat-item"><span class="csi-label">Průměr</span><span class="csi-val">${avg}${unit}</span></div>
-            <div class="compare-stat-item"><span class="csi-label">Max</span><span class="csi-val" style="color:${color}">${max}${unit}</span></div>
-          </div>
-        </div>`;
+      return `<div class="compare-stat-row">
+        <div class="compare-stat-name"><span class="compare-dot" style="background:${color}"></span>${device.name}</div>
+        <div class="compare-stat-vals">
+          <div class="compare-stat-item"><span class="csi-label">Min</span><span class="csi-val" style="color:${color}">${min}${unit}</span></div>
+          <div class="compare-stat-item"><span class="csi-label">Průměr</span><span class="csi-val">${avg}${unit}</span></div>
+          <div class="compare-stat-item"><span class="csi-label">Max</span><span class="csi-val" style="color:${color}">${max}${unit}</span></div>
+        </div>
+      </div>`;
     }).join('');
-
-    el.innerHTML = rows || '';
+    el.innerHTML = rows;
   });
 }
 
