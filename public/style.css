@@ -905,3 +905,51 @@ body {
   .bat-bar { width: 60px; }
   .bat-name { max-width: 100px; }
 }
+
+/* ══════════════════════════════════
+   DRAG & DROP — iOS style
+══════════════════════════════════ */
+
+/* Wiggle animace */
+@keyframes wiggle {
+  0%,100% { transform: rotate(-1.5deg) scale(1.01); }
+  50%      { transform: rotate(1.5deg)  scale(1.01); }
+}
+.wiggle {
+  animation: wiggle 0.35s ease-in-out infinite;
+  cursor: grab;
+}
+.dnd-mode .device-card { cursor: grab; }
+
+/* Karta při tažení */
+.dnd-dragging {
+  position: fixed !important;
+  z-index: 9999 !important;
+  pointer-events: none;
+  opacity: 0.92;
+  transform: scale(1.04) rotate(1.5deg);
+  box-shadow: 0 24px 48px rgba(0,0,0,0.5);
+  border-color: var(--accent) !important;
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Placeholder kde karta přistane */
+.dnd-placeholder {
+  border: 2px dashed var(--border2);
+  border-radius: var(--r);
+  background: rgba(255,255,255,0.02);
+  flex-shrink: 0;
+}
+
+/* Tip text v edit módu */
+.dnd-mode::before {
+  content: 'Podržte a přetáhněte · Klepněte mimo pro ukončení';
+  display: block;
+  font-size: 11px;
+  color: var(--text2);
+  text-align: center;
+  padding: 0 0 12px;
+  grid-column: 1 / -1;
+  letter-spacing: 0.03em;
+}
