@@ -317,22 +317,26 @@ function renderDashboard() {
   grid.innerHTML = '';
   allDevices.forEach(d => grid.appendChild(buildCard(d)));
   goveeDevices.forEach(d => grid.appendChild(buildGoveeCard(d)));
+  initDnd('devices-grid');
 }
 function renderLights() {
   const grid = document.getElementById('lights-grid');
   grid.innerHTML = '';
   allDevices.filter(d=>deviceType(d)==='light').forEach(d=>grid.appendChild(buildCard(d)));
   goveeDevices.forEach(d=>grid.appendChild(buildGoveeCard(d)));
+  initDnd('lights-grid');
 }
 function renderPlugs() {
   renderGrid('plugs-grid', allDevices.filter(d=>deviceType(d)==='plug'));
   setTimeout(() => allDevices.filter(d=>deviceType(d)==='plug').forEach(d=>loadPowerChart(d.id)), 100);
+  initDnd('plugs-grid');
 }
 function renderGrid(containerId, devices) {
   const grid = document.getElementById(containerId); if (!grid) return;
   grid.innerHTML = '';
   if (!devices.length) { grid.innerHTML = '<p style="color:var(--text2);padding:32px">Žádná zařízení</p>'; return; }
   devices.forEach(d => grid.appendChild(buildCard(d)));
+  initDnd(containerId);
 }
 
 // ====================================================
@@ -524,21 +528,61 @@ async function toggleDevice(id, code, el) {
   } catch(e) { el.classList.toggle('on',!on); }
 }
 
-// OPRAVA JASU: Detekuj správný kód dle zařízení
+// OPRAVA JASU: Detekuj správný kód dle zařízení + aktualizuj lokální stav
 async function setBrightness(id, pct) {
   const device = allDevices.find(d=>d.id===id);
   const status = device?.status || [];
-  const hasBrV2 = status.find(s=>s.code==='bright_value_v2');
-  const hasBr   = status.find(s=>s.code==='bright_value');
+  const hasBrV2    = status.find(s=>s.code==='bright_value_v2');
+  const hasBr      = status.find(s=>s.code==='bright_value');
+  const hasColour  = status.find(s=>s.code==='colour_data_v2') || status.find(s=>s.code==='colour_data');
+  const workMode   = status.find(s=>s.code==='work_mode');
+
   let commands;
+
   if (hasBrV2) {
-    commands = [{ code:'bright_value_v2', value:Math.max(10, Math.round((pct/100)*1000)) }];
+    // Standardní světlo s bright_value_v2 (0–1000)
+    const val = Math.max(10, Math.round((pct/100)*1000));
+    commands = [{ code:'bright_value_v2', value: val }];
+    hasBrV2.value = val;
+
   } else if (hasBr) {
-    commands = [{ code:'bright_value', value:Math.max(25, Math.round(25+(pct/100)*230)) }];
+    // Starší světlo s bright_value (25–255)
+    const val = Math.max(25, Math.round(25+(pct/100)*230));
+    commands = [{ code:'bright_value', value: val }];
+    hasBr.value = val;
+
+  } else if (hasColour) {
+    // Světlo bez bright_value — používá V v colour_data (0–1000)
+    // Přepni do white módu pokud není, pak nastav jas přes bright_value_v2
+    // nebo uprav V v colour_data pokud je v colour módu
+    const mode = workMode?.value || 'white';
+    if (mode === 'colour') {
+      // V colour módu měň V složku colour_data
+      const cdKey = status.find(s=>s.code==='colour_data_v2') ? 'colour_data_v2' : 'colour_data';
+      const cd = status.find(s=>s.code===cdKey);
+      const current = cd?.value || { h:0, s:1000, v:1000 };
+      const newV = Math.max(10, Math.round((pct/100)*1000));
+      const newVal = { h: current.h||0, s: current.s||1000, v: newV };
+      commands = [{ code: cdKey, value: newVal }];
+      if (cd) cd.value = newVal;
+    } else {
+      // V white módu zkus bright_value_v2 i tak
+      const val = Math.max(10, Math.round((pct/100)*1000));
+      commands = [{ code:'bright_value_v2', value: val }];
+    }
   } else {
-    commands = [{ code:'bright_value_v2', value:Math.max(10, Math.round((pct/100)*1000)) }];
+    // Fallback
+    commands = [{ code:'bright_value_v2', value: Math.max(10, Math.round((pct/100)*1000)) }];
   }
-  await fetch(`/api/device/${id}/control`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({commands})});
+
+  // Aktualizuj brightness-label lokálně
+  const label = document.getElementById(`br-${id}`);
+  if (label) label.textContent = pct + '%';
+
+  await fetch(`/api/device/${id}/control`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ commands })
+  });
 }
 
 // ====================================================
@@ -696,11 +740,18 @@ function openLightModal(id) {
   document.getElementById('modal-title').textContent = device.name;
 
   const st = device.status || [];
-  const brightV2 = st.find(s=>s.code==='bright_value_v2');
-  const brightV1 = st.find(s=>s.code==='bright_value');
+  const brightV2   = st.find(s=>s.code==='bright_value_v2');
+  const brightV1   = st.find(s=>s.code==='bright_value');
+  const colourData = st.find(s=>s.code==='colour_data_v2') || st.find(s=>s.code==='colour_data');
   let pct = 50;
-  if (brightV2) pct = Math.round((brightV2.value/1000)*100);
-  else if (brightV1) pct = Math.round(((brightV1.value-25)/230)*100);
+  if (brightV2) {
+    pct = Math.round((brightV2.value/1000)*100);
+  } else if (brightV1) {
+    pct = Math.round(((brightV1.value-25)/230)*100);
+  } else if (colourData?.value?.v !== undefined) {
+    // colour_data zařízení — jas je V složka (0–1000)
+    pct = Math.round((colourData.value.v/1000)*100);
+  }
   pct = Math.max(1, Math.min(100, pct));
 
   document.getElementById('modal-body').innerHTML = buildLightModalHtml({
@@ -907,3 +958,195 @@ function renderCompareStats(sensors) {
 // INIT
 loadDevices();
 setInterval(loadDevices, 15000);
+
+// ====================================================
+// DRAG & DROP — iOS style
+// Podržení karty → wiggle animace → přesunutí
+// ====================================================
+let _dnd = {
+  active: false,
+  dragging: null,
+  placeholder: null,
+  startX: 0, startY: 0,
+  offX: 0, offY: 0,
+  grid: null,
+  order: {},     // gridId → [deviceId, ...]
+  longPressTimer: null,
+};
+
+// Ulož pořadí do localStorage
+function saveDndOrder(gridId) {
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+  const ids = [...grid.children]
+    .filter(c => c.dataset.deviceId)
+    .map(c => c.dataset.deviceId);
+  try { localStorage.setItem('dnd-' + gridId, JSON.stringify(ids)); } catch(e) {}
+}
+
+// Načti uložené pořadí a přeuspořádej
+function applyDndOrder(gridId) {
+  try {
+    const saved = JSON.parse(localStorage.getItem('dnd-' + gridId) || 'null');
+    if (!saved || !saved.length) return;
+    const grid = document.getElementById(gridId);
+    if (!grid) return;
+    const cards = {};
+    [...grid.children].forEach(c => { if (c.dataset.deviceId) cards[c.dataset.deviceId] = c; });
+    saved.forEach(id => { if (cards[id]) grid.appendChild(cards[id]); });
+  } catch(e) {}
+}
+
+function enterEditMode(grid) {
+  if (_dnd.active) return;
+  _dnd.active = true;
+  _dnd.grid = grid;
+  grid.classList.add('dnd-mode');
+  // Wiggle na všechny karty
+  [...grid.children].forEach(c => { if (c.classList.contains('device-card')) c.classList.add('wiggle'); });
+  // Kliknutí mimo = ukončí edit mód
+  setTimeout(() => document.addEventListener('click', exitEditModeOnOutside, { once: true, capture: true }), 100);
+}
+
+function exitEditMode() {
+  if (!_dnd.active) return;
+  _dnd.active = false;
+  if (_dnd.grid) {
+    _dnd.grid.classList.remove('dnd-mode');
+    [..._dnd.grid.children].forEach(c => c.classList.remove('wiggle'));
+    saveDndOrder(_dnd.grid.id);
+  }
+  _dnd.grid = null;
+  document.removeEventListener('click', exitEditModeOnOutside, true);
+}
+
+function exitEditModeOnOutside(e) {
+  // Kliknutí na kartu = přesunutí, ne ukončení
+  if (e.target.closest('.device-card')) return;
+  exitEditMode();
+}
+
+function startDrag(e, card) {
+  if (!_dnd.active) return;
+  e.preventDefault();
+
+  const touch = e.touches ? e.touches[0] : e;
+  const rect = card.getBoundingClientRect();
+  _dnd.dragging = card;
+  _dnd.offX = touch.clientX - rect.left;
+  _dnd.offY = touch.clientY - rect.top;
+  _dnd.startX = touch.clientX;
+  _dnd.startY = touch.clientY;
+
+  // Placeholder
+  const ph = document.createElement('div');
+  ph.className = 'dnd-placeholder';
+  ph.style.width = rect.width + 'px';
+  ph.style.height = rect.height + 'px';
+  card.parentNode.insertBefore(ph, card);
+  _dnd.placeholder = ph;
+
+  // Dragging styl
+  card.classList.add('dnd-dragging');
+  card.classList.remove('wiggle');
+  card.style.width  = rect.width  + 'px';
+  card.style.height = rect.height + 'px';
+  card.style.left   = rect.left   + 'px';
+  card.style.top    = rect.top    + 'px';
+  document.body.appendChild(card);
+
+  document.addEventListener('mousemove', onDragMove);
+  document.addEventListener('touchmove', onDragMove, { passive: false });
+  document.addEventListener('mouseup',   onDragEnd);
+  document.addEventListener('touchend',  onDragEnd);
+}
+
+function onDragMove(e) {
+  if (!_dnd.dragging) return;
+  e.preventDefault();
+  const touch = e.touches ? e.touches[0] : e;
+  const x = touch.clientX - _dnd.offX;
+  const y = touch.clientY - _dnd.offY;
+  _dnd.dragging.style.left = x + 'px';
+  _dnd.dragging.style.top  = y + 'px';
+
+  // Najdi nejbližší kartu a přesuň placeholder
+  const grid = _dnd.grid;
+  if (!grid) return;
+  const cards = [...grid.querySelectorAll('.device-card:not(.dnd-dragging)')];
+  let closest = null, closestDist = Infinity;
+  const midX = touch.clientX, midY = touch.clientY;
+  cards.forEach(c => {
+    const r = c.getBoundingClientRect();
+    const cx = r.left + r.width/2, cy = r.top + r.height/2;
+    const dist = Math.sqrt((midX-cx)**2 + (midY-cy)**2);
+    if (dist < closestDist) { closestDist = dist; closest = c; }
+  });
+  if (closest) {
+    const r = closest.getBoundingClientRect();
+    const before = touch.clientX < r.left + r.width/2;
+    grid.insertBefore(_dnd.placeholder, before ? closest : closest.nextSibling);
+  }
+}
+
+function onDragEnd() {
+  if (!_dnd.dragging) return;
+  document.removeEventListener('mousemove', onDragMove);
+  document.removeEventListener('touchmove', onDragMove);
+  document.removeEventListener('mouseup',   onDragEnd);
+  document.removeEventListener('touchend',  onDragEnd);
+
+  const card = _dnd.dragging;
+  const ph   = _dnd.placeholder;
+
+  // Vrať kartu na místo placeholder
+  card.classList.remove('dnd-dragging');
+  card.classList.add('wiggle');
+  card.style.cssText = '';
+  ph.parentNode.insertBefore(card, ph);
+  ph.remove();
+
+  _dnd.dragging = null;
+  _dnd.placeholder = null;
+  saveDndOrder(_dnd.grid?.id);
+}
+
+// Attach drag events na kartu
+function attachDnd(card, gridId) {
+  card.dataset.gridId = gridId;
+
+  // Long press = vstup do edit módu
+  card.addEventListener('touchstart', e => {
+    _dnd.longPressTimer = setTimeout(() => {
+      navigator.vibrate?.(30);
+      const grid = document.getElementById(gridId);
+      if (grid) { enterEditMode(grid); startDrag(e, card); }
+    }, 500);
+  }, { passive: true });
+
+  card.addEventListener('touchend',  () => clearTimeout(_dnd.longPressTimer));
+  card.addEventListener('touchmove', () => clearTimeout(_dnd.longPressTimer));
+
+  // Na PC: long mousedown = edit mód
+  card.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    _dnd.longPressTimer = setTimeout(() => {
+      const grid = document.getElementById(gridId);
+      if (grid) { enterEditMode(grid); startDrag(e, card); }
+    }, 500);
+  });
+  card.addEventListener('mouseup',   () => clearTimeout(_dnd.longPressTimer));
+  card.addEventListener('mouseleave',() => clearTimeout(_dnd.longPressTimer));
+
+  // Pokud už jsme v edit módu, mousedown/touchstart rovnou zahájí drag
+  card.addEventListener('mousedown', e => { if (_dnd.active && _dnd.grid?.id === gridId) startDrag(e, card); });
+  card.addEventListener('touchstart', e => { if (_dnd.active && _dnd.grid?.id === gridId) startDrag(e, card); }, { passive: false });
+}
+
+// Zavolej po vykreslení karet
+function initDnd(gridId) {
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+  applyDndOrder(gridId);
+  grid.querySelectorAll('.device-card').forEach(c => attachDnd(c, gridId));
+}
